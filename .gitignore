@@ -27,6 +27,8 @@
 /Assets/Realisticcarcontrollerv3/
 /Assets/Art/ignore
 /Assets/UI/ignore
+/Assets/External Resource
+/Assets/Packages
 
 # Visual Studio cache directory
 .vs/

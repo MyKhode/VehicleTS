@@ -10,3 +10,14 @@
 <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/MyKhode/VehicleTS">
 
 </div>
+
+### important
+
+#### download Nuget to install supabase
+```
+https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity
+```
+#### this template and import to project for supabase login template with google Oauth
+```
+https://github.com/wiverson/supabase-unity-template.git
+```
