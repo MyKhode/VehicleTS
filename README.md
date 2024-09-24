@@ -21,3 +21,8 @@ https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity
 ```
 https://github.com/wiverson/supabase-unity-template.git
 ```
+
+### supabase
+### Photon
+### New Input System
+### Easy Transition package

@@ -26,9 +26,12 @@
 # my custom ignore
 /Assets/Realisticcarcontrollerv3/
 /Assets/Art/ignore
+/Assets/Art/Vehicle
+/Assets/Art/Prefab
 /Assets/UI/ignore
 /Assets/External Resource
 /Assets/Packages
+/Assets/Photon
 
 # Visual Studio cache directory
 .vs/
