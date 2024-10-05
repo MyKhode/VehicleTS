@@ -25,13 +25,11 @@
 
 # my custom ignore
 /Assets/Realisticcarcontrollerv3/
-/Assets/Art/ignore
-/Assets/Art/Vehicle
-/Assets/Art/Prefab
-/Assets/UI/ignore
+/Assets/Ikhode
 /Assets/External Resource
 /Assets/Packages
 /Assets/Photon
+/Assets/MapMagic
 
 # Visual Studio cache directory
 .vs/
@@ -80,3 +78,8 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+/Assets/NatureManufacture Assets
+/Assets/ParrelSync-master
+/Assets/EasyRoads3D
+/Assets/ProceduralGrass
+/Assets/Quixel

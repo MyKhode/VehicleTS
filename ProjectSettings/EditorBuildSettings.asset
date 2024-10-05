@@ -6,6 +6,18 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/Ikhode/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/RCC City (Car Selection with Loaded Scene).unity
+    guid: d81b6413c2842a245a852fcb07731e1e
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Online/Setup_Online.unity
+    guid: 8a654108c5b3f9147a5fc6f0e141144f
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Online/Menu_Online.unity
+    guid: e6414a0e0e350c9469f9917d573f4c48
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Online/Gameplay_Online.unity
+    guid: 6789c92ec73a9ff45a29532a21851509
   m_configObjects: {}
