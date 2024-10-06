@@ -3,17 +3,13 @@ using UnityEngine;
 
 public class NetcodeSceneManagerDemo : NetworkBehaviour
 {
-
-    [SerializeField]
-    private int selectedCarIndex = 0;
-
     [SerializeField]
     private Transform SpawnPoint;
 
+    private int selectedCarIndex = 0;  // Default value, client will set their own
+
     private void Start()
     {
-
-        // Subscribe to the client connection event
         if (NetworkManager.Singleton != null)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnectedCallback;
@@ -34,36 +30,83 @@ public class NetcodeSceneManagerDemo : NetworkBehaviour
 
     private void OnClientConnectedCallback(ulong clientId)
     {
-        SpawnPlayer(clientId);
+        if (IsServer)
+        {
+            // The server doesn't choose the vehicle, it just waits for the client to send the vehicle selection
+            Debug.Log($"Client {clientId} connected, waiting for vehicle selection...");
+        }
     }
 
-    private void SpawnPlayer(ulong clientId)
+    /// <summary>
+    /// This is called by the client to send their selected vehicle index to the server.
+    /// </summary>
+    [ServerRpc (RequireOwnership = false)]
+    public void SubmitVehicleSelectionServerRpc(int selectedVehicleIndex, ulong clientId)
     {
-        if (!IsServer)
+        SpawnPlayer(selectedVehicleIndex, clientId);
+    }
+
+    /// <summary>
+    /// This spawns the player with the selected vehicle.
+    /// </summary>
+    private void SpawnPlayer(int selectedVehicleIndex, ulong clientId)
+    {
+        if (!IsServer) return;
+
+        // Instantiate the selected vehicle for the client
+        var selectedVehicle = RCC_NetcodeDemoVehicles.Instance.vehicles[selectedVehicleIndex];
+        if (selectedVehicle == null)
         {
+            Debug.LogError("Selected vehicle prefab is null!");
             return;
         }
 
-        var newVehicle = Instantiate(RCC_NetcodeDemoVehicles.Instance.vehicles[selectedCarIndex], SpawnPoint.position, SpawnPoint.rotation);
+        var newVehicle = Instantiate(selectedVehicle, SpawnPoint.position, SpawnPoint.rotation);
         RCC.RegisterPlayerVehicle(newVehicle);
         RCC.SetControl(newVehicle, true);
 
         var networkObject = newVehicle.GetComponent<NetworkObject>();
         if (networkObject == null)
         {
-            Debug.LogError("Player prefab is missing the NetworkObject component!");
+            Debug.LogError("Player vehicle prefab is missing the NetworkObject component!");
             Destroy(newVehicle);
             return;
         }
 
-        if (RCC_SceneManager.Instance.activePlayerCamera)
-        {
-            RCC_SceneManager.Instance.activePlayerCamera.SetTarget(newVehicle);
-        }
-
+        // Spawn the vehicle as the player object
         networkObject.SpawnAsPlayerObject(clientId, true);
 
-        Debug.Log($"Player spawned for client {clientId}");
+        // Notify the client to set their camera to the new vehicle
+        UpdateClientCameraClientRpc(clientId, networkObject.NetworkObjectId);
+    }
+
+    /// <summary>
+    /// ClientRpc to update the camera on the client side to follow the newly spawned vehicle.
+    /// </summary>
+    [ClientRpc]
+    private void UpdateClientCameraClientRpc(ulong clientId, ulong vehicleNetworkObjectId)
+    {
+        if (IsOwner && NetworkManager.Singleton.LocalClientId == clientId)
+        {
+            // Retrieve the vehicle game object
+            var vehicle = NetworkManager.SpawnManager.SpawnedObjects[vehicleNetworkObjectId].gameObject;
+
+            // Get the RCC_CarControllerV3 component from the vehicle
+            var carController = vehicle.GetComponent<RCC_CarControllerV3>();
+
+            if (RCC_SceneManager.Instance.activePlayerCamera != null && carController != null)
+            {
+                // Set the target to the car controller, not the game object
+                RCC_SceneManager.Instance.activePlayerCamera.SetTarget(carController);
+            }
+        }
+    }
+
+    public void SelectVehicle(int vehicleIndex)
+    {
+        selectedCarIndex = vehicleIndex;
+
+        // Send the selection to the server
+        SubmitVehicleSelectionServerRpc(selectedCarIndex, NetworkManager.Singleton.LocalClientId);
     }
 }
-
