@@ -25,12 +25,18 @@
 
 # my custom ignore
 /Assets/Realisticcarcontrollerv3/
-/Assets/Ikhode
+
 /Assets/External Resource
 /Assets/Packages
 /Assets/Photon
 /Assets/MapMagic
 
+# Unignore the script directory within /Assets/Ikhode/
+!/Assets/Ikhode/Scripts/
+/Assets/Ikhode/Art/
+/Assets/Ikhode/Material/
+/Assets/Ikhode/Scenes
+/Assets/Ikhode/UI
 # Visual Studio cache directory
 .vs/
 
