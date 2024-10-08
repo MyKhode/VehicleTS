@@ -6,8 +6,11 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Ikhode/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Ikhode/Scenes/Menu/Scene/Acc/GoogleAuth.unity
+    guid: 39bd3a690d118dd4cbea4a38f16aaf17
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Main Menu.unity
+    guid: 6ffa5e13688c8bd49bdd4d63a76d8151
   - enabled: 1
     path: Assets/Ikhode/Scenes/RCC City (Car Selection with Loaded Scene).unity
     guid: d81b6413c2842a245a852fcb07731e1e
@@ -15,9 +18,30 @@ EditorBuildSettings:
     path: Assets/Ikhode/Scenes/Online/Setup_Online.unity
     guid: 8a654108c5b3f9147a5fc6f0e141144f
   - enabled: 1
-    path: Assets/Ikhode/Scenes/Online/Menu_Online.unity
-    guid: e6414a0e0e350c9469f9917d573f4c48
-  - enabled: 1
     path: Assets/Ikhode/Scenes/Online/Gameplay_Online.unity
     guid: 6789c92ec73a9ff45a29532a21851509
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Acc/Account.unity
+    guid: 4c40cfe0818121f4991c64f3d6654d5a
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Shop/Shop.unity
+    guid: 212da7fa8c029624b850211b93f30ad5
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Shop/BuyCar.unity
+    guid: 183ddc92e317c0644a84dcecb031b15a
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Garage/Garage.unity
+    guid: e88f1a12ae13edf4aa3cea605d6aa634
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Garage/Paint.unity
+    guid: 484d532084a7b7e4fa960060edbace78
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Garage/SelectVehicle.unity
+    guid: 1ec63007176838b43bdcdde10809a6d4
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Garage/View.unity
+    guid: e9bab08ef9fd5394f930c365502ef9fd
+  - enabled: 1
+    path: Assets/Ikhode/Scenes/Menu/Scene/Settings/Settings.unity
+    guid: f2fe277b1f4d6624f82d54847de04aaa
   m_configObjects: {}

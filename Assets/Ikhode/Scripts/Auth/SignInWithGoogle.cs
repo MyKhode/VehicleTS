@@ -7,14 +7,23 @@ using TMPro;
 using UnityEngine;
 using static Supabase.Gotrue.Constants;
 using System.Net;
+using AHUI;
+using UnityEngine.SceneManagement;  // Add for scene management
 
+
+    
 public class SignInWithGoogle : MonoBehaviour
 {
     [SerializeField] private string RedirectUrl = "http://localhost:3700/";
+    [SerializeField] private string loginSceneName = "GoogleAuth";
+    [SerializeField] private string homeSceneName = "Account";
 
     // Public Unity References
-    public TMP_Text ErrorText = null!;
-    public SupabaseManager SupabaseManager = null!;
+    public TMP_Text ErrorText = null;
+    public SupabaseManager SupabaseManager = null;
+    public NotificationManager NotificationManager = null; // Add reference to NotificationManager
+    public Transform notificationParent = null;
+    public GameObject notificationPrefab = null;
 
     // Private implementation
     private bool _doSignIn;
@@ -27,13 +36,11 @@ public class SignInWithGoogle : MonoBehaviour
     private string _pkce;
     private string _token;
 
-    // Unity does not allow async UI events, so we set a flag and use Update() to do the async work
     public void SignIn()
     {
         _doSignIn = true;
     }
 
-    // Unity does not allow async UI events, so we set a flag and use Update() to do the async work
     public void SignOut()
     {
         _doSignOut = true;
@@ -41,27 +48,37 @@ public class SignInWithGoogle : MonoBehaviour
 
     private async void Update()
     {
-        // Unity does not allow async UI events, so we set a flag and use Update() to do the async work
+        // Removed auto sign-out on start
+
         if (_doSignOut)
         {
             _doSignOut = false;
             await SupabaseManager.Supabase()!.Auth.SignOut();
-            _doSignOut = false;
+
+            // Check if NotificationManager is assigned before using it
+            if (NotificationManager != null && notificationParent != null && notificationPrefab != null)
+            {
+                NotificationManager.ShowNotification("Signed Out", "You have been signed out successfully.", notificationParent, notificationPrefab);
+            }
+
+            // Clear all saved user data from PlayerPrefs
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+
+            // Change scene after sign-out
+            SceneManager.LoadScene(loginSceneName);
         }
 
         if (_doExchangeCode)
         {
             _doExchangeCode = false;
             await PerformExchangeCode();
-            _doExchangeCode = false;
         }
 
-        // Unity does not allow async UI events, so we set a flag and use Update() to do the async work
         if (_doSignIn)
         {
             _doSignIn = false;
             await PerformSignIn();
-            _doSignIn = false;
         }
     }
 
@@ -69,8 +86,7 @@ public class SignInWithGoogle : MonoBehaviour
     {
         if (httpListener == null)
         {
-            HttpListener httpListener = new HttpListener();
-
+            httpListener = new HttpListener();
             httpListener.Prefixes.Add(RedirectUrl);
             httpListener.Start();
             httpListener.BeginGetContext(new AsyncCallback(IncomingHttpRequest), httpListener);
@@ -81,29 +97,34 @@ public class SignInWithGoogle : MonoBehaviour
     {
         Debug.Log("IncomingHttpRequest");
 
-        HttpListener httpListener;
-        HttpListenerContext httpContext;
-        HttpListenerRequest httpRequest;
-        HttpListenerResponse httpResponse;
-        string responseString;
+        HttpListener httpListener = (HttpListener)result.AsyncState;
+        HttpListenerContext httpContext = httpListener.EndGetContext(result);
 
-        // Get back the reference to our http listener
-        httpListener = (HttpListener)result.AsyncState;
-
-        // Fetch the context object
-        httpContext = httpListener.EndGetContext(result);
-
-        // The context object has the request object for us, that holds details about the incoming request
-        httpRequest = httpContext.Request;
-
+        HttpListenerRequest httpRequest = httpContext.Request;
         _token = httpRequest.QueryString.Get("code");
 
-        // Build a response to send an "ok" back to the browser for the user to see
-        httpResponse = httpContext.Response;
-        responseString = "<html><body><b>DONE!</b><br>(You can close this tab/window now)</body></html>";
+        HttpListenerResponse httpResponse = httpContext.Response;
+        string responseString = @"
+<html>
+    <head>
+        <style>
+            body {
+                font-family: sans-serif;
+                text-align: center;
+            }
+            h1 {
+                font-size: 2em;
+                margin-bottom: 0.5em;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>You've been signed in with Google!</h1>
+        <p>You can close this tab/window now.</p>
+    </body>
+</html>
+";        
         byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
-
-        // Send the output to the client browser
         httpResponse.ContentLength64 = buffer.Length;
         System.IO.Stream output = httpResponse.OutputStream;
         output.Write(buffer, 0, buffer.Length);
@@ -118,6 +139,21 @@ public class SignInWithGoogle : MonoBehaviour
     {
         try
         {
+            if (SupabaseManager.Supabase() == null)
+            {
+                if (ErrorText != null)
+                {
+                    ErrorText.text = "SupabaseManager is not set.";
+                }
+
+                // Check if NotificationManager is assigned before using it
+                if (NotificationManager != null && notificationParent != null && notificationPrefab != null)
+                {
+                    NotificationManager.ShowNotification("Login Error", "SupabaseManager is not set.", notificationParent, notificationPrefab);
+                }
+                return;
+            }
+
             var providerAuth = (await SupabaseManager.Supabase()!.Auth.SignIn(Provider.Google, new SignInOptions
             {
                 FlowType = OAuthFlowType.PKCE,
@@ -129,35 +165,75 @@ public class SignInWithGoogle : MonoBehaviour
         }
         catch (GotrueException goTrueException)
         {
-            ErrorText.text = $"{goTrueException.Reason} {goTrueException.Message}";
+            if (ErrorText != null)
+            {
+                ErrorText.text = $"{goTrueException.Reason} {goTrueException.Message}";
+            }
+
+            // Check if NotificationManager is assigned before using it
+            if (NotificationManager != null && notificationParent != null && notificationPrefab != null)
+            {
+                NotificationManager.ShowNotification("Login Error", $"{goTrueException.Reason}: {goTrueException.Message}", notificationParent, notificationPrefab);
+            }
             Debug.Log(goTrueException.Message, gameObject);
             Debug.LogException(goTrueException, gameObject);
         }
         catch (Exception e)
         {
             Debug.Log(e.Message, gameObject);
+
+            // Check if NotificationManager is assigned before using it
+            if (NotificationManager != null && notificationParent != null && notificationPrefab != null)
+            {
+                NotificationManager.ShowNotification("Login Error", $"An error occurred: {e.Message}", notificationParent, notificationPrefab);
+            }
             Debug.Log(e, gameObject);
         }
     }
 
     private async Task PerformExchangeCode()
+{
+    try
     {
-        try
+        // Exchange authorization code for a session
+        Session session = (await SupabaseManager.Supabase()!.Auth.ExchangeCodeForSession(_pkce, _token)!);
+
+        var name = session.User?.UserMetadata.ContainsKey("name") == true 
+            ? session.User.UserMetadata["name"].ToString() 
+            : "Unknown Name";
+
+        // Store encrypted session details in PlayerPrefs
+        PlayerPrefs.SetString("OAuth_Name", name);
+        PlayerPrefs.SetString("OAuth_Email", session.User?.Email ?? "Unknown Email");
+
+        // Encrypt and store tokens securely
+        string encryptedAccessToken = EncryptionHelper.Encrypt(session.AccessToken);
+        string encryptedRefreshToken = EncryptionHelper.Encrypt(session.RefreshToken);
+
+        PlayerPrefs.SetString("OAuth_AccessToken", encryptedAccessToken);
+        PlayerPrefs.SetString("OAuth_RefreshToken", encryptedRefreshToken);
+        PlayerPrefs.SetString("OAuth_UID", session.User?.Id ?? "Unknown User ID");
+        PlayerPrefs.SetString("OAuth_CreatedAt", session.User?.CreatedAt.ToString() ?? "Unknown Creation Date");
+        PlayerPrefs.SetString("OAuth_LastSignIn", DateTime.Now.ToString());
+        PlayerPrefs.Save();
+
+        if (ErrorText != null)
         {
-            Session session = (await SupabaseManager.Supabase()!.Auth.ExchangeCodeForSession(_pkce, _token)!);
-            ErrorText.text = $"Success! Signed Up as {session.User?.Email}";
+            ErrorText.text = $"Success! Signed Up as {name} {session.User?.Email}";
         }
-        catch (GotrueException goTrueException)
+
+        // Change scene after sign-in
+        SceneManager.LoadScene(homeSceneName);
+    }
+    catch (GotrueException goTrueException)
+    {
+        Debug.LogError($"Error during sign-in: {goTrueException.Message}");
+        if (ErrorText != null)
         {
-            Debug.Log("GotrueException");
-            ErrorText.text = $"{goTrueException.Reason} {goTrueException.Message}";
-            Debug.Log(goTrueException.Message, gameObject);
-            Debug.LogException(goTrueException, gameObject);
-        }
-        catch (Exception e)
-        {
-            Debug.Log(e.Message, gameObject);
-            Debug.Log(e, gameObject);
+            ErrorText.text = "Error: Sign-in failed!";
         }
     }
 }
+
+    }
+

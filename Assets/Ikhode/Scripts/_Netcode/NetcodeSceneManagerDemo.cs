@@ -106,7 +106,8 @@ public class NetcodeSceneManagerDemo : NetworkBehaviour
     {
         selectedCarIndex = vehicleIndex;
 
-        // Send the selection to the server
+        // Send the selection to the server, which will handle the actual vehicle spawning
         SubmitVehicleSelectionServerRpc(selectedCarIndex, NetworkManager.Singleton.LocalClientId);
     }
+
 }
