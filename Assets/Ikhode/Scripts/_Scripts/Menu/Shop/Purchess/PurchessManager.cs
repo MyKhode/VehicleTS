@@ -99,8 +99,7 @@ public class PurchessManager : MonoBehaviour
         {
             playerMoney -= (decimal)item.Price;  // Deduct price
             item.SetIsOwned(true);               // Mark item as owned
-
-            // Sync with Supabase
+            await supabaseModelManager.AddPurchase(item.ItemID); // Add purchase to Supabase
             await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
             UpdateItemUI();
             Debug.Log($"Player money after buying {item.ItemName}: {playerMoney}"); // Debug money
@@ -111,7 +110,6 @@ public class PurchessManager : MonoBehaviour
             ShowNotification("Insufficient Funds", "Not enough money to purchase this item.");
         }
     }
-
 
     public async void SellItem(int itemID)
     {
@@ -126,8 +124,7 @@ public class PurchessManager : MonoBehaviour
         decimal saleAmount = (decimal)item.Price * 0.3m;
         playerMoney += saleAmount;
         item.SetIsOwned(false); // Mark item as not owned
-
-        // Sync with Supabase
+        await supabaseModelManager.RemovePurchase(item.ItemID); // Remove purchase from Supabase
         await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
         UpdateItemUI();
         Debug.Log($"Player money after selling {item.ItemName}: {playerMoney}"); // Debug money

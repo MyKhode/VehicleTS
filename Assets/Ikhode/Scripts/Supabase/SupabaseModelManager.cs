@@ -8,10 +8,11 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;  // Add this line
 
 public class SupabaseModelManager : MonoBehaviour
 {
-    public SupabaseSettings SupabaseSettings = null!;
+    public SupabaseSettings SupabaseSettings;
     private Supabase.Client client;
     private User currentUser;
 
@@ -21,19 +22,11 @@ public class SupabaseModelManager : MonoBehaviour
         client = new Supabase.Client(SupabaseSettings.SupabaseURL, SupabaseSettings.SupabaseAnonKey, options);
         await client.InitializeAsync();
 
-        var _OAuthSession = PlayerPrefs.GetString("OAuth_UID", null);
-        if (_OAuthSession != null)
-        {
-            Debug.Log($"Authenticated");
-        }
-        else
-        {
-            Debug.Log("Not authenticated");
-        }
+        var oAuthSession = PlayerPrefs.GetString("OAuth_UID", null);
+        Debug.Log(oAuthSession != null ? "Authenticated" : "Not authenticated");
 
         await InitializePlayerWithOAuth();
     }
-
 
     public async Task<decimal> GetPlayerCash()
     {
@@ -97,8 +90,70 @@ public class SupabaseModelManager : MonoBehaviour
             Debug.LogError($"Error updating player cash: {ex.Message}");
         }
     }
+   public async Task AddPurchase(int vehicleID)
+{
+    string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
+    if (string.IsNullOrEmpty(oAuthUID))
+    {
+        Debug.LogError("OAuth_UID not found. Please authenticate first.");
+        return;
+    }
 
-    public async Task AddPurchase(int vehicleID)
+    try
+    {
+        await InitializePlayerIfNotExists(oAuthUID);
+
+        var existingPurchases = await client.From<Purchases>().Filter("player_uid", Operator.Equals, oAuthUID).Single();
+
+        if (existingPurchases == null)
+        {
+            var purchase = new Purchases
+            {
+                PlayerUID = oAuthUID,
+                VehicleID = vehicleID.ToString(), // Changed to direct assignment
+                PurchaseDate = DateTime.UtcNow
+            };
+
+            var resultInsert = await client.From<Purchases>().Insert(purchase);
+            if (resultInsert == null)
+            {
+                Debug.LogError("Failed to add purchase: Insert returned null.");
+            }
+            else
+            {
+                Debug.Log($"Successfully added purchase for Player UID: {oAuthUID}, Vehicle ID: {vehicleID}");
+            }
+        }
+        else
+        {
+            var existingVehicleIDs = existingPurchases.VehicleID.Trim('(', ')').Split(',')
+                                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                                    .Select(int.Parse).ToList();
+
+            if (!existingVehicleIDs.Contains(vehicleID))
+            {
+                existingVehicleIDs.Add(vehicleID);
+                existingPurchases.VehicleID = $"({string.Join(",", existingVehicleIDs)})";
+
+                var resultUpdate = await client.From<Purchases>().Update(existingPurchases);
+                if (resultUpdate == null)
+                {
+                    Debug.LogError("Failed to update purchase: Update returned null.");
+                }
+                else
+                {
+                    Debug.Log($"Successfully added vehicle ID {vehicleID} to existing purchases for Player UID: {oAuthUID}");
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Debug.LogError($"Error adding purchase: {ex.Message}");
+    }
+}
+
+    public async Task RemovePurchase(int vehicleID)
     {
         string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
         if (string.IsNullOrEmpty(oAuthUID))
@@ -109,28 +164,45 @@ public class SupabaseModelManager : MonoBehaviour
 
         try
         {
-            var purchase = new Purchases
-            {
-                PlayerUID = oAuthUID,
-                VehicleID = vehicleID,
-                PurchaseDate = DateTime.UtcNow
-            };
+            await InitializePlayerIfNotExists(oAuthUID);  // Ensure player exists before removing purchase
 
-            var result = await client.From<Purchases>().Insert(purchase);
-            if (result == null)
+            // Fetch existing purchases
+            var existingPurchases = await client.From<Purchases>().Filter("player_uid", Operator.Equals, oAuthUID).Single();
+
+            if (existingPurchases != null)
             {
-                Debug.LogError("Failed to add purchase: Insert returned null.");
+                var existingVehicleIDs = existingPurchases.VehicleID.Trim('(', ')').Split(',').Select(int.Parse).ToList();
+                if (existingVehicleIDs.Contains(vehicleID))
+                {
+                    existingVehicleIDs.Remove(vehicleID);
+                    existingPurchases.VehicleID = $"({string.Join(",", existingVehicleIDs)})";
+
+                    var resultUpdate = await client.From<Purchases>().Update(existingPurchases);
+                    if (resultUpdate == null)
+                    {
+                        Debug.LogError("Failed to remove purchase: Update returned null.");
+                    }
+                    else
+                    {
+                        Debug.Log($"Successfully removed vehicle ID {vehicleID} from purchases for Player UID: {oAuthUID}");
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"Vehicle ID {vehicleID} not found in purchases.");
+                }
             }
             else
             {
-                Debug.Log($"Successfully added purchase for Player UID: {oAuthUID}, Vehicle ID: {vehicleID}");
+                Debug.LogError("No purchases found for the provided OAuth UID.");
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Error adding purchase: {ex.Message}");
+            Debug.LogError($"Error removing purchase: {ex.Message}");
         }
     }
+
 
     private async Task InitializePlayerWithOAuth()
     {
@@ -144,8 +216,6 @@ public class SupabaseModelManager : MonoBehaviour
 
                 if (!string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(refreshToken))
                 {
-                    string oAuthName = PlayerPrefs.GetString("OAuth_Name", "New Player");
-
                     await InitializePlayerIfNotExists(oAuthUID);
                 }
                 else
