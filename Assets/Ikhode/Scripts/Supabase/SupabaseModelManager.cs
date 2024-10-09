@@ -26,8 +26,33 @@ public class SupabaseModelManager : MonoBehaviour
         Debug.Log(oAuthSession != null ? "Authenticated" : "Not authenticated");
 
         await InitializePlayerWithOAuth();
+          await SubscribeToCashUpdates();
     }
+  // Subscribe to real-time cash updates for the player
+    private async Task SubscribeToCashUpdates()
+    {
+        string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
 
+        if (string.IsNullOrEmpty(oAuthUID))
+        {
+            Debug.LogError("OAuth_UID not found. Cannot subscribe to real-time cash updates.");
+            return;
+        }
+
+        // Subscribe to changes in the "players" table where the UID matches
+        client.From<Player>()
+              .Filter("uid", Operator.Equals, oAuthUID)
+              .On(Supabase.Realtime.Constants.EventType.Update, (payload) =>
+              {
+                  var updatedPlayer = payload.Record as Player;
+                  Debug.Log($"Real-time cash update: {updatedPlayer.Cash}");
+
+                  // Trigger the event to update the cash in the UI
+                  OnCashUpdated?.Invoke(updatedPlayer.Cash);
+              })
+              .Subscribe();
+    }
+    // Fetch the player's cash value initially
     public async Task<decimal> GetPlayerCash()
     {
         string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);

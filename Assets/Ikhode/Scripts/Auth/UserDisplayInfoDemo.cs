@@ -3,6 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Networking;
+using System.Threading.Tasks;
+using Supabase;
+using Supabase.Gotrue;
+using Supabase.Postgrest.Models;
 
 public class UserDisplayInfoDemo : MonoBehaviour
 {
@@ -12,7 +16,10 @@ public class UserDisplayInfoDemo : MonoBehaviour
     [SerializeField] private TMP_Text userCreatedAtText;
     [SerializeField] private TMP_Text userLastSignInText;
     [SerializeField] private TMP_Text userIDText;
+    [SerializeField] private TMP_Text userCashText; // New field to display user cash
     [SerializeField] private Image userProfilePic;
+
+    public SupabaseModelManager supabaseModelManager; // Reference to the Supabase manager
 
     private void Start()
     {
@@ -29,6 +36,9 @@ public class UserDisplayInfoDemo : MonoBehaviour
 
         // Update UI elements with user info
         UpdateUserInfoUI(userInfo);
+
+        // Fetch and display user cash
+        DisplayUserCash();
     }
 
     // Retrieve user information from PlayerPrefs
@@ -77,6 +87,24 @@ public class UserDisplayInfoDemo : MonoBehaviour
             {
                 Debug.LogError($"Failed to load profile picture: {www.error}");
             }
+        }
+    }
+
+    // Fetch and display user cash
+    private async void DisplayUserCash()
+    {
+        if (supabaseModelManager == null)
+        {
+            Debug.LogError("SupabaseModelManager is not assigned.");
+            return;
+        }
+
+        decimal playerCash = await supabaseModelManager.GetPlayerCash();
+
+        // Update the user cash text UI
+        if (userCashText != null)
+        {
+            userCashText.text = $"Cash: ${playerCash}";
         }
     }
 }
