@@ -17,7 +17,7 @@ MonoBehaviour:
   Price: 22
   IsOwned: 0
   IsReleased: 1
-  thumbnail: {fileID: 2800000, guid: 658e24dc94f85e14d8ec62bf5e4e1b52, type: 3}
+  thumbnail: {fileID: 2800000, guid: cf74a971720a5244990e02330d37c470, type: 3}
   OnIsOwnedDataChange:
     m_PersistentCalls:
       m_Calls: []
@@ -26,10 +26,10 @@ MonoBehaviour:
   VehicleGamePlayPrefab: {fileID: 5287327670923739592, guid: f592cb04f9951ca4490c2cbc8edf51d2,
     type: 3}
   VehicleScore: 0
-  Manufacturer: 'BMW '
-  ModelName: IM
-  Year: 2003
-  Country: USA
+  Manufacturer: 
+  ModelName: 
+  Year: 
+  Country: 
   Speed: 2.23
   Handling: 3.85
   Acceleration: 4.59

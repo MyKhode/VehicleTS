@@ -290,40 +290,4 @@ public class SupabaseModelManager : MonoBehaviour
         // Implement your decryption logic here
         return encryptedData; // Placeholder
     }
-    public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
-    {
-        try
-        {
-            // Fetch the existing purchases for the player
-            var existingPurchases = await client.From<Purchases>()
-                                                .Filter("player_uid", Operator.Equals, playerUID)
-                                                .Single();
-
-            // Check if purchases exist and if they contain the vehicle ID
-            if (existingPurchases != null)
-            {
-                var existingVehicleIDs = existingPurchases.VehicleID
-                                            .Trim('(', ')')              // Remove the parentheses
-                                            .Split(',')                  // Split the string by commas
-                                            .Where(id => !string.IsNullOrWhiteSpace(id)) // Filter out empty strings
-                                            .Select(int.Parse)           // Parse each ID to an integer
-                                            .ToList();
-
-                // Check if the provided vehicleID exists in the list of owned vehicles
-                return existingVehicleIDs.Contains(vehicleID);
-            }
-            else
-            {
-                Debug.LogWarning($"No purchases found for Player UID: {playerUID}");
-                return false;
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Error checking vehicle ownership: {ex.Message}");
-            return false;
-        }
-    }
-
-
 }

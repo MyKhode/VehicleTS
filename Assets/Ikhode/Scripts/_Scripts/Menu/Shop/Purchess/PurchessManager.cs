@@ -26,7 +26,6 @@ public class PurchessManager : MonoBehaviour
     private List<VehicleElement> vehicleElements = new List<VehicleElement>(); // List of UI elements representing each vehicle
     private decimal playerMoney = 1000m;               // Use decimal for player money
     private SupabaseModelManager supabaseModelManager;
-    [SerializeField] private string _sceneViewName = "View";
 
     private void Awake()
     {
@@ -197,7 +196,7 @@ public class PurchessManager : MonoBehaviour
     private void LoadViewScene()
     {
         // Load the scene using a specific name or your scene management logic
-        UnityEngine.SceneManagement.SceneManager.LoadScene(_sceneViewName);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("ViewScene");
     }
 }
 
