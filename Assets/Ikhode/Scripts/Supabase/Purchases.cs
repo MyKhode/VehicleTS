@@ -12,7 +12,7 @@ public class Purchases : BaseModel // Inherit from BaseModel
     public string PlayerUID { get; set; } // Reference to the player's UID from authentication
 
     [Column("vehicle_id")]
-    public string VehicleID { get; set; } // ID of the purchased vehicle
+    public int VehicleID { get; set; } // ID of the purchased vehicle
 
     [Column("purchase_date")]
     public DateTime PurchaseDate { get; set; } = DateTime.UtcNow; // Date of purchase with default to current timestamp
