@@ -15,7 +15,6 @@ public class SupabaseModelManager : MonoBehaviour
     public SupabaseSettings SupabaseSettings;
     private Supabase.Client client;
     private User currentUser;
-      public Action<decimal> OnCashUpdated; // Event for cash updates
 
     private async void Awake()
     {
@@ -27,33 +26,8 @@ public class SupabaseModelManager : MonoBehaviour
         Debug.Log(oAuthSession != null ? "Authenticated" : "Not authenticated");
 
         await InitializePlayerWithOAuth();
-          await SubscribeToCashUpdates();
     }
-  // Subscribe to real-time cash updates for the player
-    private async Task SubscribeToCashUpdates()
-    {
-        string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
 
-        if (string.IsNullOrEmpty(oAuthUID))
-        {
-            Debug.LogError("OAuth_UID not found. Cannot subscribe to real-time cash updates.");
-            return;
-        }
-
-        // Subscribe to changes in the "players" table where the UID matches
-        client.From<Player>()
-              .Filter("uid", Operator.Equals, oAuthUID)
-              .On(Supabase.Realtime.Constants.EventType.Update, (payload) =>
-              {
-                  var updatedPlayer = payload.Record as Player;
-                  Debug.Log($"Real-time cash update: {updatedPlayer.Cash}");
-
-                  // Trigger the event to update the cash in the UI
-                  OnCashUpdated?.Invoke(updatedPlayer.Cash);
-              })
-              .Subscribe();
-    }
-    // Fetch the player's cash value initially
     public async Task<decimal> GetPlayerCash()
     {
         string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
@@ -178,7 +152,6 @@ public class SupabaseModelManager : MonoBehaviour
         Debug.LogError($"Error adding purchase: {ex.Message}");
     }
 }
-
     public async Task RemovePurchase(int vehicleID)
     {
         string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
@@ -291,40 +264,39 @@ public class SupabaseModelManager : MonoBehaviour
         // Implement your decryption logic here
         return encryptedData; // Placeholder
     }
-    public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
+     public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
+{
+    try
     {
-        try
+        // Fetch the existing purchases for the player
+        var existingPurchases = await client.From<Purchases>()
+                                            .Filter("player_uid", Operator.Equals, playerUID)
+                                            .Single();
+
+        // Check if purchases exist and if they contain the vehicle ID
+        if (existingPurchases != null)
         {
-            // Fetch the existing purchases for the player
-            var existingPurchases = await client.From<Purchases>()
-                                                .Filter("player_uid", Operator.Equals, playerUID)
-                                                .Single();
+            var existingVehicleIDs = existingPurchases.VehicleID
+                                        .Trim('(', ')')              // Remove the parentheses
+                                        .Split(',')                  // Split the string by commas
+                                        .Where(id => !string.IsNullOrWhiteSpace(id)) // Filter out empty strings
+                                        .Select(int.Parse)           // Parse each ID to an integer
+                                        .ToList();
 
-            // Check if purchases exist and if they contain the vehicle ID
-            if (existingPurchases != null)
-            {
-                var existingVehicleIDs = existingPurchases.VehicleID
-                                            .Trim('(', ')')              // Remove the parentheses
-                                            .Split(',')                  // Split the string by commas
-                                            .Where(id => !string.IsNullOrWhiteSpace(id)) // Filter out empty strings
-                                            .Select(int.Parse)           // Parse each ID to an integer
-                                            .ToList();
-
-                // Check if the provided vehicleID exists in the list of owned vehicles
-                return existingVehicleIDs.Contains(vehicleID);
-            }
-            else
-            {
-                Debug.LogWarning($"No purchases found for Player UID: {playerUID}");
-                return false;
-            }
+            // Check if the provided vehicleID exists in the list of owned vehicles
+            return existingVehicleIDs.Contains(vehicleID);
         }
-        catch (Exception ex)
+        else
         {
-            Debug.LogError($"Error checking vehicle ownership: {ex.Message}");
+            Debug.LogWarning($"No purchases found for Player UID: {playerUID}");
             return false;
         }
     }
-
+    catch (Exception ex)
+    {
+        Debug.LogError($"Error checking vehicle ownership: {ex.Message}");
+        return false;
+    }
+}
 
 }

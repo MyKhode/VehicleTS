@@ -89,6 +89,10 @@ public class UserDisplayInfoDemo : MonoBehaviour
             }
         }
     }
+    public void RefreshUI()
+    {
+        DisplayUserCash(); // Refresh cash display
+    }
 
     // Fetch and display user cash
     private async void DisplayUserCash()
@@ -104,7 +108,7 @@ public class UserDisplayInfoDemo : MonoBehaviour
         // Update the user cash text UI
         if (userCashText != null)
         {
-            userCashText.text = $"Cash: ${playerCash}";
+            userCashText.text = $"{playerCash}";
         }
     }
 }

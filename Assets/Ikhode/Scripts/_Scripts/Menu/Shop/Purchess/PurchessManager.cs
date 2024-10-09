@@ -1,3 +1,5 @@
+using com.example;
+
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -5,7 +7,6 @@ using System.Collections.Generic;
 using EasyTransition;
 using AHUI;
 using System.Threading.Tasks;
-using com.example;
 
 public class PurchessManager : MonoBehaviour
 {
@@ -27,11 +28,19 @@ public class PurchessManager : MonoBehaviour
     private decimal playerMoney = 1000m;               // Use decimal for player money
     private SupabaseModelManager supabaseModelManager;
 
+    private UserDisplayInfoDemo userDisplayInfoDemo; 
+
     private void Awake()
     {
         LoadVehicleData();
         supabaseModelManager = FindObjectOfType<SupabaseModelManager>(); // Find SupabaseModelManager in the scene
-    }
+
+        userDisplayInfoDemo = FindObjectOfType<UserDisplayInfoDemo>();
+        if (userDisplayInfoDemo == null)
+        {
+            Debug.LogError("UserDisplayInfoDemo is not found in the scene.");
+        }
+    } 
 
     private async void Start()
     {
@@ -104,6 +113,13 @@ public class PurchessManager : MonoBehaviour
             await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
             UpdateItemUI();
             Debug.Log($"Player money after buying {item.ItemName}: {playerMoney}"); // Debug money
+            
+            // Refresh user cash UI
+            if(userDisplayInfoDemo != null)
+            {
+                userDisplayInfoDemo.RefreshUI();
+            }
+
             ShowNotification("Item Purchased", $"{item.ItemName} bought. Price = ${item.Price}.00");
         }
         else
@@ -131,6 +147,13 @@ public class PurchessManager : MonoBehaviour
         await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
         UpdateItemUI();
         Debug.Log($"Player money after selling {item.ItemName}: {playerMoney}"); // Debug money
+        
+        // Refresh user cash UI
+        if(userDisplayInfoDemo != null)
+        {
+            userDisplayInfoDemo.RefreshUI();
+        }
+
         ShowNotification("Item Sold", $"{item.ItemName} sold for ${saleAmount}.00");
     }
 
