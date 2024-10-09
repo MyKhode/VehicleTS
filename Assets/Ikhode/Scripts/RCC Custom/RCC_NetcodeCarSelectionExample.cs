@@ -46,10 +46,10 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
     /// </summary>
     private void CreateVehicles() {
 
-        for (int i = 0; i < RCC_DemoVehicles.Instance.vehicles.Length; i++) {
+        for (int i = 0; i < RCC_NetcodeDemoVehicles.Instance.vehicles.Length; i++) {
 
             // Spawning the vehicle with no controllable, no player, and engine off. We don't want to let player control the vehicle while in selection menu.
-            RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(RCC_DemoVehicles.Instance.vehicles[i], spawnPosition.position, spawnPosition.rotation, false, false, false);
+            RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(RCC_NetcodeDemoVehicles.Instance.vehicles[i], spawnPosition.position, spawnPosition.rotation, false, false, false);
 
             // Disabling spawned vehicle. 
             spawnedVehicle.gameObject.SetActive(false);
