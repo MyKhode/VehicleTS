@@ -8,9 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
-
-
-
 using com.example;
 using Supabase;
 using Supabase.Gotrue;
@@ -33,35 +30,33 @@ public class UserDisplayInfoDemo : MonoBehaviour
     public SupabaseSettings SupabaseSettings;
     private Supabase.Client client;
 
-    [SerializeField] private string oAuthUID;
-    [SerializeField] private string oAuthName;
-
+    private string oAuthUID;
+    private string oAuthName;
     
-    private decimal InitializeCash = 25000m;
+    private const decimal InitializeCash = 25000m;
 
-
-    private void Awake()
+    private async void Awake()
     {
-        InitializeSupabaseClient();
+        await InitializeSupabaseClientAsync();
         LoadUserInfoFromPrefs();
-        DisplayUserInfo();
-        RefreshUI();
+        await DisplayUserInfoAsync();
+        await RefreshUIAsync();
     }
 
-    private void InitializeSupabaseClient()
+    private async Task InitializeSupabaseClientAsync()
     {
         var options = new SupabaseOptions { AutoConnectRealtime = true };
         client = new Supabase.Client(SupabaseSettings.SupabaseURL, SupabaseSettings.SupabaseAnonKey, options);
+        await client.InitializeAsync();  // Ensure it's initialized before proceeding
     }
 
     private void LoadUserInfoFromPrefs()
     {
-        oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
-        oAuthName = PlayerPrefs.GetString("OAuth_Name", null);
+        oAuthUID = PlayerPrefs.GetString("OAuth_UID", string.Empty);
+        oAuthName = PlayerPrefs.GetString("OAuth_Name", "Unknown Name");
     }
 
-
-    private async void DisplayUserInfo()
+    private async Task DisplayUserInfoAsync()
     {
         var userInfo = GetUserInfoFromPrefs();
         UpdateUserInfoUI(userInfo);
@@ -74,7 +69,7 @@ public class UserDisplayInfoDemo : MonoBehaviour
         {
             Name = PlayerPrefs.GetString("OAuth_Name", "Unknown Name"),
             Email = PlayerPrefs.GetString("OAuth_Email", "Unknown Email"),
-            ProfilePic = PlayerPrefs.GetString("OAuth_ProfilePic", "No Profile Picture"),
+            ProfilePic = PlayerPrefs.GetString("OAuth_ProfilePic", null),
             UserID = PlayerPrefs.GetString("OAuth_UID", "Unknown User ID"),
             CreatedAt = PlayerPrefs.GetString("OAuth_CreatedAt", "Unknown Creation Date"),
             LastSignIn = PlayerPrefs.GetString("OAuth_LastSignIn", "Unknown Last Sign-In")
@@ -89,13 +84,13 @@ public class UserDisplayInfoDemo : MonoBehaviour
         userLastSignInText?.SetText($"Last Sign In: {userInfo.LastSignIn}");
         userIDText?.SetText($"UID: {userInfo.UserID}");
 
-        if (userProfilePic != null)
+        if (!string.IsNullOrEmpty(userInfo.ProfilePic) && userProfilePic != null)
         {
-            StartCoroutine(LoadProfilePic(userInfo.ProfilePic));
+            StartCoroutine(LoadProfilePicAsync(userInfo.ProfilePic));
         }
     }
 
-    private IEnumerator LoadProfilePic(string url)
+    private IEnumerator LoadProfilePicAsync(string url)
     {
         using (var request = UnityWebRequestTexture.GetTexture(url))
         {
@@ -113,38 +108,39 @@ public class UserDisplayInfoDemo : MonoBehaviour
         }
     }
 
-    private void RefreshUI()
+    private async Task RefreshUIAsync()
     {
-        DisplayUserCashAsync();
+        await DisplayUserCashAsync();
     }
 
     private async Task DisplayUserCashAsync()
     {
-        decimal playerCash = await GetPlayerCash();
+        decimal playerCash = await GetPlayerCashAsync();
 
         if (userCashText != null)
         {
-            userCashText.text = playerCash.ToString();
+            userCashText.text = playerCash.ToString("N0");  // Format with comma separators
         }
     }
 
-    public async Task<decimal> GetPlayerCash()
+    public async Task<decimal> GetPlayerCashAsync()
     {
         if (string.IsNullOrEmpty(oAuthUID)) return 0;
 
         try
         {
-            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
+            await InitializePlayerIfNotExistsAsync(oAuthUID, oAuthName);
             var result = await client.From<Users>().Filter("id", Operator.Equals, oAuthUID).Single();
             return result?.Cash ?? 0;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.LogError($"Error fetching player cash: {ex.Message}");
             return 0;
         }
     }
 
-    public async Task InitializePlayerIfNotExists(string uid, string username)
+    public async Task InitializePlayerIfNotExistsAsync(string uid, string username)
     {
         if (string.IsNullOrEmpty(uid))
         {
@@ -154,16 +150,14 @@ public class UserDisplayInfoDemo : MonoBehaviour
 
         try
         {
-            var existingPlayer = await client.From<Users>()
-                                             .Filter("id", Operator.Equals, uid)
-                                             .Single();
+            var existingPlayer = await client.From<Users>().Filter("id", Operator.Equals, uid).Single();
 
             if (existingPlayer == null)
             {
                 var newPlayer = new Users
                 {
                     ID = uid,
-                    Cash = InitializeCash // You may replace this with a method or value
+                    Cash = InitializeCash
                 };
 
                 await client.From<Users>().Insert(newPlayer);
@@ -176,7 +170,7 @@ public class UserDisplayInfoDemo : MonoBehaviour
         }
     }
 
-    public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
+    public async Task<bool> IsVehicleOwnedAsync(string playerUID, int vehicleID)
     {
         try
         {
@@ -197,8 +191,9 @@ public class UserDisplayInfoDemo : MonoBehaviour
 
             return false;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.LogError($"Error checking vehicle ownership: {ex.Message}");
             return false;
         }
     }

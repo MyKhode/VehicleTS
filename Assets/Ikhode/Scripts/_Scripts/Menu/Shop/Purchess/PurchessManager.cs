@@ -25,6 +25,7 @@ public class PurchaseManager : MonoBehaviour
     private decimal playerMoney = 1000m;
     private SupabaseModelManager supabaseModelManager;
     private VehicleDataSyncManager vehicleDataSyncManager;
+    [SerializeField] private string ViewScene = "View";
 
     private async void Awake()
     {
@@ -171,5 +172,5 @@ public class PurchaseManager : MonoBehaviour
         LoadViewScene();
     }
 
-    private void LoadViewScene() => UnityEngine.SceneManagement.SceneManager.LoadScene("ViewScene");
+    private void LoadViewScene() => UnityEngine.SceneManagement.SceneManager.LoadScene(ViewScene);
 }

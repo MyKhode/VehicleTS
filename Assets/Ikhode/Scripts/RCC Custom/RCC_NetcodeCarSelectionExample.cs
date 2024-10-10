@@ -75,7 +75,7 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
             {
                 // Spawning the vehicle with no controllable, no player, and engine off.
                 RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(
-                    RCC_NetcodeDemoVehicles.Instance.vehicles[vehicleData[i].ItemID], // Use the vehicle ID from VehicleData
+                    RCC_DemoVehicles.Instance.vehicles[vehicleData[i].ItemID], // Use the vehicle ID from VehicleData
                     spawnPosition.position,
                     spawnPosition.rotation,
                     false, // controllable

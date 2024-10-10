@@ -51,7 +51,7 @@ public class VehicleDataSyncManager : MonoBehaviour
         {
             foreach (var vehicle in vehicleData)
             {
-                bool isOwned = await userDisplayInfoDemo.IsVehicleOwned(oAuthUID, vehicle.ItemID);
+                bool isOwned = await userDisplayInfoDemo.IsVehicleOwnedAsync(oAuthUID, vehicle.ItemID);
                 vehicle.IsOwned = isOwned; // Sync ownership status
 
                 Debug.Log($"Vehicle ID: {vehicle.ItemID}, IsOwned: {vehicle.IsOwned}"); // Log sync result
