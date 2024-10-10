@@ -91,6 +91,11 @@ public class RCC_NetcodeNetwork : NetworkBehaviour
 
     private void FixedUpdate()
     {
+         if (carController == null || rigid == null)
+        {
+            Debug.LogWarning("RCC_CarControllerV3 or Rigidbody is not initialized.");
+            return;
+        }
         if (IsOwner)
         {
             // Update NetworkVariables
@@ -137,7 +142,7 @@ public class RCC_NetcodeNetwork : NetworkBehaviour
             carController.indicatorsOn = indicatorsOn.Value;
         }
 
-        // Display nickname text if available
+         // Display nickname text if available
         if (nicknameText && IsOwner)
         {
             nicknameText.text = NetworkManager.Singleton.LocalClientId.ToString();
@@ -146,6 +151,10 @@ public class RCC_NetcodeNetwork : NetworkBehaviour
                 nicknameText.transform.LookAt(Camera.main.transform);
                 nicknameText.transform.rotation = Quaternion.Euler(0, nicknameText.transform.eulerAngles.y + 180f, 0);
             }
+        }
+        else if (nicknameText == null)
+        {
+            Debug.LogError("Nickname TextMesh is not initialized.");
         }
     }
 }

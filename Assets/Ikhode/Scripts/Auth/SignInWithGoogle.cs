@@ -215,6 +215,7 @@ public class SignInWithGoogle : MonoBehaviour
         PlayerPrefs.SetString("OAuth_UID", session.User?.Id ?? "Unknown User ID");
         PlayerPrefs.SetString("OAuth_CreatedAt", session.User?.CreatedAt.ToString() ?? "Unknown Creation Date");
         PlayerPrefs.SetString("OAuth_LastSignIn", DateTime.Now.ToString());
+        PlayerPrefs.SetString("OAuth_ProfilePic", session.User?.UserMetadata.ContainsKey("avatar_url") == true ? session.User.UserMetadata["avatar_url"].ToString() : "No Profile Picture");
         PlayerPrefs.Save();
 
         if (ErrorText != null)

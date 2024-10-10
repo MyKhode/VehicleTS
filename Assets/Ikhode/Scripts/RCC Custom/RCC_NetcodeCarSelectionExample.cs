@@ -28,51 +28,83 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
     public string nextScene;        //  Name of the target scene when we select the vehicle.
     public NetcodeSceneManagerDemo _netcodeSelect;
 
+    public VehicleData[] vehicleData;
+    void Awake() {
+        LoadVehicleData();
+    }
+
     private void Start() {
 
-        //	Getting RCC Camera.
-        if (!RCCCamera)
-            RCCCamera = RCC_SceneManager.Instance.activePlayerCamera;
+           CreateVehicles();
 
-        selectedIndex = PlayerPrefs.GetInt("SelectedRCCVehicle", 0);
+        // Add this check to avoid out-of-range access
+        if (_spawnedVehicles.Count == 0) {
+            Debug.LogError("No vehicles spawned. Please ensure that vehicle data is correctly set.");
+            return; // Prevent further execution if no vehicles are available
+        }
 
-        // First, we are instantiating all vehicles and store them in _spawnedVehicles list.
-        CreateVehicles();
+        // Clamp selectedIndex to be within the bounds of the list
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, _spawnedVehicles.Count - 1);
+        SpawnVehicle(); // Only call this if there are vehicles
 
+    }
+    private void LoadVehicleData() {
+        // Load all VehicleData assets from the Resources folder
+        vehicleData = Resources.LoadAll<VehicleData>("");
+
+        // Check if vehicleData is populated
+        if (vehicleData.Length > 0)
+        {
+            Debug.Log("VehicleData assets successfully loaded.");
+        }
+        else
+        {
+            Debug.LogWarning("No VehicleData assets found in Resources.");
+        }
     }
 
     /// <summary>
     /// Creating all vehicles at once.
     /// </summary>
-    private void CreateVehicles() {
+    private void CreateVehicles()
+    {
+        for (int i = 0; i < vehicleData.Length; i++)
+        {
+            // Check if the vehicle is owned
+            if (vehicleData[i].IsOwned)
+            {
+                // Spawning the vehicle with no controllable, no player, and engine off.
+                RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(
+                    RCC_NetcodeDemoVehicles.Instance.vehicles[vehicleData[i].ItemID], // Use the vehicle ID from VehicleData
+                    spawnPosition.position,
+                    spawnPosition.rotation,
+                    false, // controllable
+                    false, // player
+                    false  // engine
+                );
 
-        for (int i = 0; i < RCC_NetcodeDemoVehicles.Instance.vehicles.Length; i++) {
+                // Disabling spawned vehicle.
+                spawnedVehicle.gameObject.SetActive(false);
 
-            // Spawning the vehicle with no controllable, no player, and engine off. We don't want to let player control the vehicle while in selection menu.
-            RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(RCC_NetcodeDemoVehicles.Instance.vehicles[i], spawnPosition.position, spawnPosition.rotation, false, false, false);
-
-            // Disabling spawned vehicle. 
-            spawnedVehicle.gameObject.SetActive(false);
-
-            // Adding and storing it in _spawnedVehicles list.
-            _spawnedVehicles.Add(spawnedVehicle);
-
+                // Adding and storing it in _spawnedVehicles list.
+                _spawnedVehicles.Add(spawnedVehicle);
+            }
         }
 
-        SpawnVehicle();
+        // Optionally, you can call SpawnVehicle here if you want to spawn a default vehicle
+        SpawnVehicle(); 
 
-        // If RCC Camera is choosen, it wil enable RCC_CameraCarSelection script. This script was used for orbiting camera.
-        if (RCCCamera) {
-
+        // If RCC Camera is chosen, it will enable RCC_CameraCarSelection script. 
+        if (RCCCamera)
+        {
             if (RCCCamera.GetComponent<RCC_CameraCarSelection>())
                 RCCCamera.GetComponent<RCC_CameraCarSelection>().enabled = true;
-
         }
 
         if (RCCCanvas)
             RCCCanvas.SetActive(false);
-
     }
+
 
     /// <summary>
     /// Increasing selected index, disabling all other vehicles, enabling current selected vehicle.

@@ -8,7 +8,7 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;  // Add this line
+using System.Linq;
 
 public class SupabaseModelManager : MonoBehaviour
 {
@@ -16,216 +16,169 @@ public class SupabaseModelManager : MonoBehaviour
     private Supabase.Client client;
     private User currentUser;
 
+    [SerializeField] private string vehicleID = "(0)"; // This is the ID of the vehicle being purchased
+    [SerializeField] private string oAuthUID;
+    [SerializeField] private string oAuthName;
+
+    private decimal InitializeCash = 25000m;
+
+
     private async void Awake()
     {
         var options = new SupabaseOptions { AutoConnectRealtime = true };
         client = new Supabase.Client(SupabaseSettings.SupabaseURL, SupabaseSettings.SupabaseAnonKey, options);
         await client.InitializeAsync();
 
-        var oAuthSession = PlayerPrefs.GetString("OAuth_UID", null);
-        Debug.Log(oAuthSession != null ? "Authenticated" : "Not authenticated");
+        // Fetch oAuthUID and oAuthName from PlayerPrefs
+        oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
+        oAuthName = PlayerPrefs.GetString("OAuth_Name", null);
 
-        await InitializePlayerWithOAuth();
+        if (!string.IsNullOrEmpty(oAuthUID))
+        {
+            // Proceed with player initialization only if UID is valid
+            await InitializePlayerWithOAuth();
+            await InitializePurchasesWithOAuth(oAuthUID, vehicleID);
+        }
     }
 
     public async Task<decimal> GetPlayerCash()
     {
-        string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
         if (string.IsNullOrEmpty(oAuthUID))
         {
-            Debug.LogError("OAuth_UID not found. Please authenticate first.");
-            return 0;
+            return 0; // Return 0 if UID is not available
         }
 
         try
         {
-            await InitializePlayerIfNotExists(oAuthUID);
+            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
 
-            var result = await client.From<Player>().Filter("uid", Operator.Equals, oAuthUID).Single();
+            var result = await client.From<Users>().Filter("id", Operator.Equals, oAuthUID).Single();
             return result?.Cash ?? 0;
         }
-        catch (Exception ex)
+        catch
         {
-            Debug.LogError($"Failed to fetch player cash: {ex.Message}");
             return 0;
         }
     }
 
     public async Task UpdatePlayerCash(decimal newCash)
     {
-        string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
         if (string.IsNullOrEmpty(oAuthUID))
         {
-            Debug.LogError("OAuth_UID not found. Please authenticate first.");
-            return;
+            return; // Exit if UID is not available
         }
 
         try
         {
-            await InitializePlayerIfNotExists(oAuthUID);
+            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
 
-            var existingPlayer = await client.From<Player>().Filter("uid", Operator.Equals, oAuthUID).Single();
+            var existingPlayer = await client.From<Users>().Filter("id", Operator.Equals, oAuthUID).Single();
             if (existingPlayer != null)
             {
-                var player = new Player
-                {
-                    UID = oAuthUID,
-                    Username = existingPlayer.Username,
-                    Cash = newCash
-                };
-
-                var result = await client.From<Player>().Upsert(player);
-                if (result == null)
-                {
-                    Debug.LogError("Failed to update player cash: Upsert returned null.");
-                }
-            }
-            else
-            {
-                Debug.LogError("Player not found for the provided OAuth UID.");
+                existingPlayer.Cash = newCash; // Update the cash value
+                await client.From<Users>().Upsert(existingPlayer);
             }
         }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Error updating player cash: {ex.Message}");
-        }
-    }
-   public async Task AddPurchase(int vehicleID)
-{
-    string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
-    if (string.IsNullOrEmpty(oAuthUID))
-    {
-        Debug.LogError("OAuth_UID not found. Please authenticate first.");
-        return;
+        catch { }
     }
 
-    try
+    public async Task AddPurchase(int vehicleID)
     {
-        await InitializePlayerIfNotExists(oAuthUID);
-
-        var existingPurchases = await client.From<Purchases>().Filter("player_uid", Operator.Equals, oAuthUID).Single();
-
-        if (existingPurchases == null)
-        {
-            var purchase = new Purchases
-            {
-                PlayerUID = oAuthUID,
-                VehicleID = vehicleID.ToString(), // Changed to direct assignment
-                PurchaseDate = DateTime.UtcNow
-            };
-
-            var resultInsert = await client.From<Purchases>().Insert(purchase);
-            if (resultInsert == null)
-            {
-                Debug.LogError("Failed to add purchase: Insert returned null.");
-            }
-            else
-            {
-                Debug.Log($"Successfully added purchase for Player UID: {oAuthUID}, Vehicle ID: {vehicleID}");
-            }
-        }
-        else
-        {
-            var existingVehicleIDs = existingPurchases.VehicleID.Trim('(', ')').Split(',')
-                                    .Where(id => !string.IsNullOrWhiteSpace(id))
-                                    .Select(int.Parse).ToList();
-
-            if (!existingVehicleIDs.Contains(vehicleID))
-            {
-                existingVehicleIDs.Add(vehicleID);
-                existingPurchases.VehicleID = $"({string.Join(",", existingVehicleIDs)})";
-
-                var resultUpdate = await client.From<Purchases>().Update(existingPurchases);
-                if (resultUpdate == null)
-                {
-                    Debug.LogError("Failed to update purchase: Update returned null.");
-                }
-                else
-                {
-                    Debug.Log($"Successfully added vehicle ID {vehicleID} to existing purchases for Player UID: {oAuthUID}");
-                }
-            }
-        }
-    }
-    catch (Exception ex)
-    {
-        Debug.LogError($"Error adding purchase: {ex.Message}");
-    }
-}
-    public async Task RemovePurchase(int vehicleID)
-    {
-        string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
         if (string.IsNullOrEmpty(oAuthUID))
         {
-            Debug.LogError("OAuth_UID not found. Please authenticate first.");
-            return;
+            return; // Exit if UID is not available
         }
 
         try
         {
-            await InitializePlayerIfNotExists(oAuthUID);  // Ensure player exists before removing purchase
+            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
 
-            // Fetch existing purchases
+            var existingPurchases = await client.From<Purchases>().Filter("player_uid", Operator.Equals, oAuthUID).Single();
+
+    
+        
+                var existingVehicleIDs = existingPurchases.VehicleID.Trim('(', ')').Split(',')
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Select(int.Parse).ToList();
+
+                if (!existingVehicleIDs.Contains(vehicleID))
+                {
+                    existingVehicleIDs.Add(vehicleID);
+                    existingPurchases.VehicleID = $"({string.Join(",", existingVehicleIDs)})";
+
+                    await client.From<Purchases>().Update(existingPurchases);
+                }
+            
+        }
+        catch { }
+    }
+
+    public async Task RemovePurchase(int vehicleID)
+    {
+        if (string.IsNullOrEmpty(oAuthUID))
+        {
+            return; // Exit if UID is not available
+        }
+
+        try
+        {
+            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
+
             var existingPurchases = await client.From<Purchases>().Filter("player_uid", Operator.Equals, oAuthUID).Single();
 
             if (existingPurchases != null)
             {
-                var existingVehicleIDs = existingPurchases.VehicleID.Trim('(', ')').Split(',').Select(int.Parse).ToList();
+                var existingVehicleIDs = existingPurchases.VehicleID.Trim('(', ')').Split(',')
+                    .Select(int.Parse).ToList();
+
                 if (existingVehicleIDs.Contains(vehicleID))
                 {
                     existingVehicleIDs.Remove(vehicleID);
                     existingPurchases.VehicleID = $"({string.Join(",", existingVehicleIDs)})";
 
-                    var resultUpdate = await client.From<Purchases>().Update(existingPurchases);
-                    if (resultUpdate == null)
-                    {
-                        Debug.LogError("Failed to remove purchase: Update returned null.");
-                    }
-                    else
-                    {
-                        Debug.Log($"Successfully removed vehicle ID {vehicleID} from purchases for Player UID: {oAuthUID}");
-                    }
-                }
-                else
-                {
-                    Debug.LogError($"Vehicle ID {vehicleID} not found in purchases.");
+                    await client.From<Purchases>().Update(existingPurchases);
                 }
             }
-            else
-            {
-                Debug.LogError("No purchases found for the provided OAuth UID.");
-            }
         }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Error removing purchase: {ex.Message}");
-        }
+        catch { }
     }
-
 
     private async Task InitializePlayerWithOAuth()
     {
+        if (!string.IsNullOrEmpty(oAuthUID))
+        {
+            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
+        }
+    }
+    public async Task InitializePlayerIfNotExists(string oAuthUID, string username)
+    {
+        if (string.IsNullOrEmpty(oAuthUID))
+        {
+            Debug.LogError("OAuth UID is null or empty.");
+            return; // Exit if UID is not available
+        }
+
         try
         {
-            string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
-            if (!string.IsNullOrEmpty(oAuthUID))
-            {
-                string accessToken = PlayerPrefs.GetString("OAuth_AccessToken", null);
-                string refreshToken = PlayerPrefs.GetString("OAuth_RefreshToken", null);
+            var existingPlayer = await client.From<Users>()
+                                            .Filter("id", Operator.Equals, oAuthUID) // Ensure it's treated as a string
+                                            .Single();
 
-                if (!string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(refreshToken))
-                {
-                    await InitializePlayerIfNotExists(oAuthUID);
-                }
-                else
-                {
-                    Debug.LogError("Session not found. Please log in first.");
-                }
-            }
-            else
+            if (existingPlayer == null)
             {
-                Debug.LogError("OAuth_UID not found. Please authenticate first.");
+                var newPlayer = new Users
+                {
+                    ID = oAuthUID,  // Ensure this value is not null
+                    Cash = InitializeCash
+                };
+
+                await client.From<Users>().Insert(newPlayer);
+                Debug.Log($"New player initialized with UID: {oAuthUID}");
             }
+        }
+        catch (FormatException ex)
+        {
+            Debug.LogError($"Invalid format for oAuthUID: {oAuthUID} - {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -233,70 +186,77 @@ public class SupabaseModelManager : MonoBehaviour
         }
     }
 
-    private async Task InitializePlayerIfNotExists(string oAuthUID)
-    {
-        var existingPlayer = await client.From<Player>().Filter("uid", Operator.Equals, oAuthUID).Single();
-        if (existingPlayer == null)
-        {
-            string oAuthName = PlayerPrefs.GetString("OAuth_Name", "New Player");
 
-            var newPlayer = new Player
-            {
-                UID = oAuthUID,
-                Username = oAuthName,
-                Cash = 0m
-            };
-
-            var result = await client.From<Player>().Insert(newPlayer);
-            if (result == null)
-            {
-                Debug.LogError("Failed to initialize player data.");
-            }
-            else
-            {
-                Debug.Log($"Initialized player data for UID: {oAuthUID} with username: {oAuthName}");
-            }
-        }
-    }
-
-    private string Decrypt(string encryptedData)
-    {
-        // Implement your decryption logic here
-        return encryptedData; // Placeholder
-    }
-     public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
+public async Task InitializePurchasesWithOAuth(string oAuthUID, string vehicleID)
 {
     try
     {
-        // Fetch the existing purchases for the player
+        // Fetch the existing player from the database
+        var existingPlayer = await client.From<Users>()
+                                         .Filter("id", Operator.Equals, oAuthUID)
+                                         .Single();
+
+        if (existingPlayer == null)
+        {
+            Debug.LogError($"Player with UID {oAuthUID} not found.");
+            return;
+        }
+
+        // Check if the player has any existing purchases
         var existingPurchases = await client.From<Purchases>()
-                                            .Filter("player_uid", Operator.Equals, playerUID)
+                                            .Filter("player_uid", Operator.Equals, oAuthUID)
                                             .Single();
 
-        // Check if purchases exist and if they contain the vehicle ID
-        if (existingPurchases != null)
+        if (existingPurchases == null)
         {
-            var existingVehicleIDs = existingPurchases.VehicleID
-                                        .Trim('(', ')')              // Remove the parentheses
-                                        .Split(',')                  // Split the string by commas
-                                        .Where(id => !string.IsNullOrWhiteSpace(id)) // Filter out empty strings
-                                        .Select(int.Parse)           // Parse each ID to an integer
-                                        .ToList();
+            // If no previous purchases exist, add a new purchase
+            var newPurchase = new Purchases
+            {
+                PlayerUID = oAuthUID,
+                VehicleID = vehicleID,
+                PurchaseDate = DateTime.UtcNow
+            };
 
-            // Check if the provided vehicleID exists in the list of owned vehicles
-            return existingVehicleIDs.Contains(vehicleID);
+            await client.From<Purchases>().Insert(newPurchase);
+            Debug.Log($"Purchase initialized for vehicle ID: {vehicleID}");
         }
         else
         {
-            Debug.LogWarning($"No purchases found for Player UID: {playerUID}");
-            return false;
+            Debug.Log($"Player {oAuthUID} already has existing purchases.");
         }
     }
     catch (Exception ex)
     {
-        Debug.LogError($"Error checking vehicle ownership: {ex.Message}");
-        return false;
+        Debug.LogError($"Error initializing purchases: {ex.Message}");
     }
 }
 
+
+
+    public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
+    {
+        try
+        {
+            var existingPurchases = await client.From<Purchases>()
+                                                .Filter("player_uid", Operator.Equals, playerUID)
+                                                .Single();
+
+            if (existingPurchases != null)
+            {
+                var existingVehicleIDs = existingPurchases.VehicleID
+                    .Trim('(', ')')
+                    .Split(',')
+                    .Select(int.Parse)
+                    .ToList();
+
+                return existingVehicleIDs.Contains(vehicleID);
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

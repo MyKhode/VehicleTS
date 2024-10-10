@@ -7,7 +7,7 @@ public class VehicleDataSyncManager : MonoBehaviour
     public SupabaseModelManager supabaseModelManager; // Reference to your Supabase model manager
     private VehicleData[] vehicleData;
 
-    private async void Start()
+    private async void Awake()
     {
         LoadVehicleData();
         await SyncVehicleDataWithDatabase();
@@ -29,7 +29,8 @@ public class VehicleDataSyncManager : MonoBehaviour
         }
     }
 
-    private async Task SyncVehicleDataWithDatabase()
+
+    public async Task SyncVehicleDataWithDatabase()
     {
         string oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
         if (string.IsNullOrEmpty(oAuthUID))

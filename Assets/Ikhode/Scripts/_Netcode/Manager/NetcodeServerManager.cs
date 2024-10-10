@@ -4,7 +4,6 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
 
-
 public enum ServerMode
 {
     Client,
@@ -18,24 +17,36 @@ public class NetcodeServerManager : MonoBehaviour
     [SerializeField] private NetworkManager m_NetworkManager;
     [SerializeField] private string m_GameplayOnlineSceneName = "Gameplay_Online";
 
-    private void Update()
+    private void Awake()
     {
-        if (m_ServerMode == ServerMode.Server)
+        if (SceneManager.GetActiveScene().name == m_GameplayOnlineSceneName)
         {
-            if (SceneManager.GetActiveScene().name == m_GameplayOnlineSceneName)
-                m_NetworkManager.StartServer();
-        }
-        else if (m_ServerMode == ServerMode.Client)
-        {
-            if (SceneManager.GetActiveScene().name == m_GameplayOnlineSceneName)
-                m_NetworkManager.StartClient();
-        }
-        else if (m_ServerMode == ServerMode.Host)
-        {
-            if (SceneManager.GetActiveScene().name == m_GameplayOnlineSceneName)
-                m_NetworkManager.StartHost();
+            switch (m_ServerMode)
+            {
+                case ServerMode.Server:
+                    // Start the server if it is not already running
+                    if (!NetworkManager.Singleton.IsServer)
+                    {
+                        m_NetworkManager.StartServer();
+                    }
+                    break;
+
+                case ServerMode.Client:
+                    // Start the client if it is not already connected
+                    if (!NetworkManager.Singleton.IsClient)
+                    {
+                        m_NetworkManager.StartClient();
+                    }
+                    break;
+
+                case ServerMode.Host:
+                    // Start the host if it is not already hosting
+                    if (!NetworkManager.Singleton.IsHost)
+                    {
+                        m_NetworkManager.StartHost();
+                    }
+                    break;
+            }
         }
     }
 }
-
-

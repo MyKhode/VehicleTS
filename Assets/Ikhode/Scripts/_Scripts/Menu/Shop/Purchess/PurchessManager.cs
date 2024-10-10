@@ -29,25 +29,37 @@ public class PurchessManager : MonoBehaviour
     private SupabaseModelManager supabaseModelManager;
 
     private UserDisplayInfoDemo userDisplayInfoDemo; 
+    private VehicleDataSyncManager vehicleDataSyncManager;
 
-    private void Awake()
+    private  void Awake()
     {
         LoadVehicleData();
         supabaseModelManager = FindObjectOfType<SupabaseModelManager>(); // Find SupabaseModelManager in the scene
+        vehicleDataSyncManager = FindObjectOfType<VehicleDataSyncManager>();
+        if (vehicleDataSyncManager == null)
+        {
+            Debug.LogError("VehicleDataSyncManager is not found in the scene.");
+        }
 
         userDisplayInfoDemo = FindObjectOfType<UserDisplayInfoDemo>();
         if (userDisplayInfoDemo == null)
         {
             Debug.LogError("UserDisplayInfoDemo is not found in the scene.");
         }
+
     } 
 
     private async void Start()
     {
         await LoadPlayerData();  // Load player data on start
+        
+        // Ensure vehicle data is synchronized before instantiating UI
+        await vehicleDataSyncManager.SyncVehicleDataWithDatabase();
+        
         InstantiateVehicles();
-        UpdateItemUI();
+        UpdateItemUI();  // Now update the UI after everything is synchronized
     }
+
 
     // Load player's cash from Supabase
     private async Task LoadPlayerData()
@@ -93,8 +105,7 @@ public class PurchessManager : MonoBehaviour
             vehicleElements.Add(vehicleElement);
         }
     }
-
-    private async void BuyItem(int itemID)
+  private async void BuyItem(int itemID)
     {
         var item = FindItemByID(itemID);
         if (item == null || item.IsOwned || !item.IsReleased)
@@ -108,18 +119,11 @@ public class PurchessManager : MonoBehaviour
         {
             playerMoney -= (decimal)item.Price;  // Deduct price
             item.SetIsOwned(true);               // Mark item as owned
-
-            // Sync with Supabase
+            await supabaseModelManager.AddPurchase(item.ItemID); // Add purchase to Supabase
             await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
             UpdateItemUI();
+            await vehicleDataSyncManager.SyncVehicleDataWithDatabase();
             Debug.Log($"Player money after buying {item.ItemName}: {playerMoney}"); // Debug money
-            
-            // Refresh user cash UI
-            if(userDisplayInfoDemo != null)
-            {
-                userDisplayInfoDemo.RefreshUI();
-            }
-
             ShowNotification("Item Purchased", $"{item.ItemName} bought. Price = ${item.Price}.00");
         }
         else
@@ -127,7 +131,6 @@ public class PurchessManager : MonoBehaviour
             ShowNotification("Insufficient Funds", "Not enough money to purchase this item.");
         }
     }
-
 
     public async void SellItem(int itemID)
     {
@@ -142,18 +145,11 @@ public class PurchessManager : MonoBehaviour
         decimal saleAmount = (decimal)item.Price * 0.3m;
         playerMoney += saleAmount;
         item.SetIsOwned(false); // Mark item as not owned
-
-        // Sync with Supabase
+        await supabaseModelManager.RemovePurchase(item.ItemID); // Remove purchase from Supabase
         await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
         UpdateItemUI();
+        await vehicleDataSyncManager.SyncVehicleDataWithDatabase();
         Debug.Log($"Player money after selling {item.ItemName}: {playerMoney}"); // Debug money
-        
-        // Refresh user cash UI
-        if(userDisplayInfoDemo != null)
-        {
-            userDisplayInfoDemo.RefreshUI();
-        }
-
         ShowNotification("Item Sold", $"{item.ItemName} sold for ${saleAmount}.00");
     }
 

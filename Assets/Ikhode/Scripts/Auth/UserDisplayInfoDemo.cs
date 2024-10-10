@@ -4,9 +4,19 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Networking;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+
+
+
+
+using com.example;
 using Supabase;
 using Supabase.Gotrue;
+using static Supabase.Gotrue.Constants;
 using Supabase.Postgrest.Models;
+using static Supabase.Postgrest.Constants;
 
 public class UserDisplayInfoDemo : MonoBehaviour
 {
@@ -16,33 +26,52 @@ public class UserDisplayInfoDemo : MonoBehaviour
     [SerializeField] private TMP_Text userCreatedAtText;
     [SerializeField] private TMP_Text userLastSignInText;
     [SerializeField] private TMP_Text userIDText;
-    [SerializeField] private TMP_Text userCashText; // New field to display user cash
+    [SerializeField] private TMP_Text userCashText;
     [SerializeField] private Image userProfilePic;
 
-    public SupabaseModelManager supabaseModelManager; // Reference to the Supabase manager
+    [Header("Supabase Settings")]
+    public SupabaseSettings SupabaseSettings;
+    private Supabase.Client client;
+
+    [SerializeField] private string oAuthUID;
+    [SerializeField] private string oAuthName;
+
+    
+    private decimal InitializeCash = 25000m;
+
+
+    private void Awake()
+    {
+        InitializeSupabaseClient();
+        LoadUserInfoFromPrefs();
+    }
+
+    private void InitializeSupabaseClient()
+    {
+        var options = new SupabaseOptions { AutoConnectRealtime = true };
+        client = new Supabase.Client(SupabaseSettings.SupabaseURL, SupabaseSettings.SupabaseAnonKey, options);
+    }
+
+    private void LoadUserInfoFromPrefs()
+    {
+        oAuthUID = PlayerPrefs.GetString("OAuth_UID", null);
+        oAuthName = PlayerPrefs.GetString("OAuth_Name", null);
+    }
 
     private void Start()
     {
         DisplayUserInfo();
+        RefreshUI();
     }
 
-    // Fetch and display user information
-    private void DisplayUserInfo()
+    private async void DisplayUserInfo()
     {
-        UserInfo userInfo = GetUserInfo();
-
-        // Log user info for debugging purposes
-        Debug.Log($"User Info:\nName: {userInfo.Name}\nEmail: {userInfo.Email}\nProfile Pic: {userInfo.ProfilePic}\nUser ID: {userInfo.UserID}\nCreated At: {userInfo.CreatedAt}\nLast Sign In: {userInfo.LastSignIn}");
-
-        // Update UI elements with user info
+        var userInfo = GetUserInfoFromPrefs();
         UpdateUserInfoUI(userInfo);
-
-        // Fetch and display user cash
-        DisplayUserCash();
+        await DisplayUserCashAsync();
     }
 
-    // Retrieve user information from PlayerPrefs
-    private UserInfo GetUserInfo()
+    private UserInfo GetUserInfoFromPrefs()
     {
         return new UserInfo
         {
@@ -55,14 +84,13 @@ public class UserDisplayInfoDemo : MonoBehaviour
         };
     }
 
-    // Update the UI elements with user information
     private void UpdateUserInfoUI(UserInfo userInfo)
     {
-        if (userNameText != null) userNameText.text = userInfo.Name;
-        if (userEmailText != null) userEmailText.text = $"Email: {userInfo.Email}";
-        if (userCreatedAtText != null) userCreatedAtText.text = $"Created At: {userInfo.CreatedAt}";
-        if (userLastSignInText != null) userLastSignInText.text = $"Last Sign In: {userInfo.LastSignIn}";
-        if (userIDText != null) userIDText.text = $"UID: {userInfo.UserID}";
+        userNameText?.SetText(userInfo.Name);
+        userEmailText?.SetText($"Email: {userInfo.Email}");
+        userCreatedAtText?.SetText($"Created At: {userInfo.CreatedAt}");
+        userLastSignInText?.SetText($"Last Sign In: {userInfo.LastSignIn}");
+        userIDText?.SetText($"UID: {userInfo.UserID}");
 
         if (userProfilePic != null)
         {
@@ -70,50 +98,88 @@ public class UserDisplayInfoDemo : MonoBehaviour
         }
     }
 
-    // Load a profile picture from a URL
     private IEnumerator LoadProfilePic(string url)
     {
-        using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(url))
+        using (var request = UnityWebRequestTexture.GetTexture(url))
         {
-            yield return www.SendWebRequest();
+            yield return request.SendWebRequest();
 
-            if (www.result == UnityWebRequest.Result.Success)
+            if (request.result == UnityWebRequest.Result.Success)
             {
-                // Apply the downloaded texture to the Image component
-                Texture2D texture = DownloadHandlerTexture.GetContent(www);
+                var texture = DownloadHandlerTexture.GetContent(request);
                 userProfilePic.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
             }
             else
             {
-                Debug.LogError($"Failed to load profile picture: {www.error}");
+                Debug.LogError($"Failed to load profile picture: {request.error}");
             }
         }
     }
-    public void RefreshUI()
+
+    private void RefreshUI()
     {
-        DisplayUserCash(); // Refresh cash display
+        DisplayUserCashAsync();
     }
 
-    // Fetch and display user cash
-    private async void DisplayUserCash()
+    private async Task DisplayUserCashAsync()
     {
-        if (supabaseModelManager == null)
+        decimal playerCash = await GetPlayerCash();
+
+        if (userCashText != null)
         {
-            Debug.LogError("SupabaseModelManager is not assigned.");
+            userCashText.text = playerCash.ToString();
+        }
+    }
+
+    public async Task<decimal> GetPlayerCash()
+    {
+        if (string.IsNullOrEmpty(oAuthUID)) return 0;
+
+        try
+        {
+            await InitializePlayerIfNotExists(oAuthUID, oAuthName);
+            var result = await client.From<Users>().Filter("id", Operator.Equals, oAuthUID).Single();
+            return result?.Cash ?? 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    public async Task InitializePlayerIfNotExists(string uid, string username)
+    {
+        if (string.IsNullOrEmpty(uid))
+        {
+            Debug.LogError("OAuth UID is null or empty.");
             return;
         }
 
-        decimal playerCash = await supabaseModelManager.GetPlayerCash();
-
-        // Update the user cash text UI
-        if (userCashText != null)
+        try
         {
-            userCashText.text = $"{playerCash}";
+            var existingPlayer = await client.From<Users>()
+                                             .Filter("id", Operator.Equals, uid)
+                                             .Single();
+
+            if (existingPlayer == null)
+            {
+                var newPlayer = new Users
+                {
+                    ID = uid,
+                    Cash = InitializeCash // You may replace this with a method or value
+                };
+
+                await client.From<Users>().Insert(newPlayer);
+                Debug.Log($"New player initialized with UID: {uid}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error initializing player: {ex.Message}");
         }
     }
 }
 
-// Serializable class to hold user information
 [System.Serializable]
 public class UserInfo
 {
@@ -123,4 +189,9 @@ public class UserInfo
     public string UserID;
     public string CreatedAt;
     public string LastSignIn;
+
+    public override string ToString()
+    {
+        return $"Name: {Name}, Email: {Email}, ProfilePic: {ProfilePic}, UserID: {UserID}, CreatedAt: {CreatedAt}, LastSignIn: {LastSignIn}";
+    }
 }
