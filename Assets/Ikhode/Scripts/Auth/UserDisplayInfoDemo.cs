@@ -44,6 +44,8 @@ public class UserDisplayInfoDemo : MonoBehaviour
     {
         InitializeSupabaseClient();
         LoadUserInfoFromPrefs();
+        DisplayUserInfo();
+        RefreshUI();
     }
 
     private void InitializeSupabaseClient()
@@ -58,11 +60,6 @@ public class UserDisplayInfoDemo : MonoBehaviour
         oAuthName = PlayerPrefs.GetString("OAuth_Name", null);
     }
 
-    private void Start()
-    {
-        DisplayUserInfo();
-        RefreshUI();
-    }
 
     private async void DisplayUserInfo()
     {
@@ -176,6 +173,33 @@ public class UserDisplayInfoDemo : MonoBehaviour
         catch (Exception ex)
         {
             Debug.LogError($"Error initializing player: {ex.Message}");
+        }
+    }
+
+    public async Task<bool> IsVehicleOwned(string playerUID, int vehicleID)
+    {
+        try
+        {
+            var existingPurchases = await client.From<Purchases>()
+                                                .Filter("player_uid", Operator.Equals, playerUID)
+                                                .Single();
+
+            if (existingPurchases != null)
+            {
+                var existingVehicleIDs = existingPurchases.VehicleID
+                    .Trim('(', ')')
+                    .Split(',')
+                    .Select(int.Parse)
+                    .ToList();
+
+                return existingVehicleIDs.Contains(vehicleID);
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

@@ -32,7 +32,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Ikhode/Scenes/Menu/Scene/Garage/Garage.unity
     guid: e88f1a12ae13edf4aa3cea605d6aa634
-  - enabled: 1
+  - enabled: 0
     path: Assets/Ikhode/Scenes/Menu/Scene/Garage/Paint.unity
     guid: 484d532084a7b7e4fa960060edbace78
   - enabled: 1

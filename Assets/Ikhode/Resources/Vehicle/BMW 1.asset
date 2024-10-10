@@ -15,7 +15,7 @@ MonoBehaviour:
   ItemID: 1
   ItemName: fff
   Price: 22
-  IsOwned: 1
+  IsOwned: 0
   IsReleased: 1
   thumbnail: {fileID: 2800000, guid: 18eec9841a25aa34d811645fd35be2a3, type: 3}
   OnIsOwnedDataChange:

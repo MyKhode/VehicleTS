@@ -1,86 +1,68 @@
-using com.example;
-
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using EasyTransition;
-using AHUI;
 using System.Threading.Tasks;
+using System.Linq;
+using AHUI;
 
-public class PurchessManager : MonoBehaviour
+public class PurchaseManager : MonoBehaviour
 {
-    public VehicleData[] vehicleData;                // Array of all purchasable items
-    public GameObject vehiclePrefab;                 // Prefab for vehicle GameObjects
-    public Transform parentTransform;                // Parent Transform to spawn vehicles
+    public VehicleData[] vehicleData;
+    public GameObject vehiclePrefab;
+    public Transform parentTransform;
 
-    public Color ownedColor = Color.green;          // Color to indicate owned items
-    public Color releasedColor = Color.blue;        // Color to indicate released items
-    public Color lockedColor = Color.red;           // Color to indicate locked items
+    public Color ownedColor = Color.green;
+    public Color releasedColor = Color.blue;
+    public Color lockedColor = Color.red;
 
-    public NotificationManager notificationManager;    // Reference to your AHUI NotificationManager
-    public Transform parentNotificationTransform;      // Parent Transform to spawn notifications
+    public NotificationManager notificationManager;
+    public Transform parentNotificationTransform;
+    public GameObject notificationPrefab;
+    public float notificationDuration = 3f;
 
-    public GameObject notificationPrefab;              // Prefab for notification UI element
-    public float notificationDuration = 3f;            // Duration to show notification (can be assigned in Inspector)
-
-    private List<VehicleElement> vehicleElements = new List<VehicleElement>(); // List of UI elements representing each vehicle
-    private decimal playerMoney = 1000m;               // Use decimal for player money
+    private List<VehicleElement> vehicleElements = new List<VehicleElement>();
+    private decimal playerMoney = 1000m;
     private SupabaseModelManager supabaseModelManager;
-
-    private UserDisplayInfoDemo userDisplayInfoDemo; 
     private VehicleDataSyncManager vehicleDataSyncManager;
 
-    private  void Awake()
+    private async void Awake()
     {
-        LoadVehicleData();
-        supabaseModelManager = FindObjectOfType<SupabaseModelManager>(); // Find SupabaseModelManager in the scene
         vehicleDataSyncManager = FindObjectOfType<VehicleDataSyncManager>();
         if (vehicleDataSyncManager == null)
         {
             Debug.LogError("VehicleDataSyncManager is not found in the scene.");
+            return;
         }
 
-        userDisplayInfoDemo = FindObjectOfType<UserDisplayInfoDemo>();
-        if (userDisplayInfoDemo == null)
-        {
-            Debug.LogError("UserDisplayInfoDemo is not found in the scene.");
-        }
+        // Sync and load data
+        await Task.WhenAll(vehicleDataSyncManager.SyncVehicleDataWithDatabase(), LoadPlayerData());
 
-    } 
-
-    private async void Start()
-    {
-        await LoadPlayerData();  // Load player data on start
-        
-        // Ensure vehicle data is synchronized before instantiating UI
-        await vehicleDataSyncManager.SyncVehicleDataWithDatabase();
-        
+        // Load and instantiate vehicles
+        LoadVehicleData();
         InstantiateVehicles();
-        UpdateItemUI();  // Now update the UI after everything is synchronized
+
+        // Update UI
+        await UpdateItemUIAsync();
     }
 
-
-    // Load player's cash from Supabase
     private async Task LoadPlayerData()
     {
-        playerMoney = await supabaseModelManager.GetPlayerCash(); // Remove playerUID
+        supabaseModelManager = FindObjectOfType<SupabaseModelManager>();
+        if (supabaseModelManager != null)
+        {
+            playerMoney = await supabaseModelManager.GetPlayerCash();
+        }
+        else
+        {
+            Debug.LogError("SupabaseModelManager is not found in the scene.");
+        }
     }
 
     private void LoadVehicleData()
     {
-        // Load all VehicleData assets from the Resources folder
         vehicleData = Resources.LoadAll<VehicleData>("");
-
-        // Check if vehicleData is populated
-        if (vehicleData.Length > 0)
-        {
-            Debug.Log("VehicleData assets successfully loaded.");
-        }
-        else
-        {
-            Debug.LogWarning("No VehicleData assets found in Resources.");
-        }
+        Debug.Log(vehicleData.Length > 0 ? "VehicleData loaded." : "No VehicleData found.");
     }
 
     private void InstantiateVehicles()
@@ -91,101 +73,89 @@ public class PurchessManager : MonoBehaviour
             return;
         }
 
-        foreach (var item in vehicleData)
+        foreach (var item in vehicleData.Where(v => v != null))
         {
-            if (item == null) continue;
-
-            // Instantiate a new vehicle GameObject
-            GameObject vehicleGO = Instantiate(vehiclePrefab, parentTransform);
-
-            // Add the VehicleElement component to the vehicle GameObject
-            VehicleElement vehicleElement = vehicleGO.AddComponent<VehicleElement>();
-            vehicleElement.vehicle = vehicleGO; // Set the vehicle GameObject
+            var vehicleGO = Instantiate(vehiclePrefab, parentTransform);
+            var vehicleElement = vehicleGO.AddComponent<VehicleElement>();
+            vehicleElement.vehicle = vehicleGO;
             vehicleElement.Initialize();
             vehicleElements.Add(vehicleElement);
         }
     }
-  private async void BuyItem(int itemID)
+
+    private async Task UpdateItemUIAsync()
+    {
+        while (vehicleData.Length > 0)
+        {
+            for (int i = 0; i < vehicleData.Length; i++)
+            {
+                if (i >= vehicleElements.Count) continue;
+
+                var item = vehicleData[i];
+                var vehicleElement = vehicleElements[i];
+                vehicleElement.UpdateVisuals(item, ownedColor, releasedColor, lockedColor);
+                SetUpButtonListeners(vehicleElement, item);
+            }
+
+            await Task.Delay(1000); // Optional delay
+        }
+    }
+
+    private void SetUpButtonListeners(VehicleElement vehicleElement, PurchasableItem item)
+    {
+        vehicleElement.buyButton.onClick.RemoveAllListeners();
+        vehicleElement.buyButton.onClick.AddListener(() => HandlePurchase(item.ItemID, true));
+
+        vehicleElement.sellButton.onClick.RemoveAllListeners();
+        vehicleElement.sellButton.onClick.AddListener(() => HandlePurchase(item.ItemID, false));
+
+        vehicleElement.viewButton.onClick.RemoveAllListeners();
+        vehicleElement.viewButton.onClick.AddListener(() => OnViewButtonClick(item.ItemID));
+    }
+
+    private async void HandlePurchase(int itemID, bool isBuying)
     {
         var item = FindItemByID(itemID);
-        if (item == null || item.IsOwned || !item.IsReleased)
+        if (item == null || (isBuying && item.IsOwned) || (!isBuying && !item.IsOwned))
             return;
 
-        // Fetch updated player money before purchase
-        playerMoney = await supabaseModelManager.GetPlayerCash(); // Remove playerUID
-        Debug.Log($"Player money before buying {item.ItemName}: {playerMoney}");
-
-        if (playerMoney >= (decimal)item.Price)
+        playerMoney = await supabaseModelManager.GetPlayerCash();
+        if (isBuying && playerMoney >= (decimal)item.Price)
         {
-            playerMoney -= (decimal)item.Price;  // Deduct price
-            item.SetIsOwned(true);               // Mark item as owned
-            await supabaseModelManager.AddPurchase(item.ItemID); // Add purchase to Supabase
-            await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
-            UpdateItemUI();
-            await vehicleDataSyncManager.SyncVehicleDataWithDatabase();
-            Debug.Log($"Player money after buying {item.ItemName}: {playerMoney}"); // Debug money
-            ShowNotification("Item Purchased", $"{item.ItemName} bought. Price = ${item.Price}.00");
+            playerMoney -= (decimal)item.Price;
+            item.SetIsOwned(true);
+            await supabaseModelManager.AddPurchase(itemID);
+        }
+        else if (!isBuying)
+        {
+            decimal saleAmount = (decimal)item.Price * 0.3m;
+            playerMoney += saleAmount;
+            item.SetIsOwned(false);
+            await supabaseModelManager.RemovePurchase(itemID);
         }
         else
         {
-            ShowNotification("Insufficient Funds", "Not enough money to purchase this item.");
-        }
-    }
-
-    public async void SellItem(int itemID)
-    {
-        var item = FindItemByID(itemID);
-        if (item == null || !item.IsOwned)
+            ShowNotification("Insufficient Funds", "Not enough money.");
             return;
+        }
 
-        // Fetch updated player money before selling
-        playerMoney = await supabaseModelManager.GetPlayerCash(); // Remove playerUID
-
-        // Add 30% of item price to playerMoney
-        decimal saleAmount = (decimal)item.Price * 0.3m;
-        playerMoney += saleAmount;
-        item.SetIsOwned(false); // Mark item as not owned
-        await supabaseModelManager.RemovePurchase(item.ItemID); // Remove purchase from Supabase
-        await supabaseModelManager.UpdatePlayerCash(playerMoney); // Remove playerUID
-        UpdateItemUI();
+        await supabaseModelManager.UpdatePlayerCash(playerMoney);
+        Debug.Log($"Player money: {playerMoney}");
         await vehicleDataSyncManager.SyncVehicleDataWithDatabase();
-        Debug.Log($"Player money after selling {item.ItemName}: {playerMoney}"); // Debug money
-        ShowNotification("Item Sold", $"{item.ItemName} sold for ${saleAmount}.00");
+        ShowNotification(isBuying ? "Item Purchased" : "Item Sold with 30% Sale", $"{item.ItemName} for {item.Price:C}");
     }
 
+    private PurchasableItem FindItemByID(int itemID) => vehicleData.FirstOrDefault(item => item.ItemID == itemID);
 
-    private PurchasableItem FindItemByID(int itemID)
+    private void ShowNotification(string title, string message)
     {
-        foreach (var item in vehicleData)
-        {
-            if (item.ItemID == itemID)
-                return item;
-        }
-        return null;
-    }
-
-    private void UpdateItemUI()
-    {
-        for (int i = 0; i < vehicleData.Length; i++)
-        {
-            var item = vehicleData[i];
-            if (i >= vehicleElements.Count) continue; // Prevent out of bounds
-
-            var vehicleElement = vehicleElements[i];
-            vehicleElement.UpdateVisuals(item, ownedColor, releasedColor, lockedColor);
-
-            // Set up the onClick events for the buy button
-            vehicleElement.buyButton.onClick.RemoveAllListeners();
-            vehicleElement.buyButton.onClick.AddListener(() => BuyItem(item.ItemID));
-
-            // Set up the onClick events for the sell button
-            vehicleElement.sellButton.onClick.RemoveAllListeners();
-            vehicleElement.sellButton.onClick.AddListener(() => SellItem(item.ItemID));
-
-            // Set up the onClick events for the view button
-            vehicleElement.viewButton.onClick.RemoveAllListeners();
-            vehicleElement.viewButton.onClick.AddListener(() => OnViewButtonClick(item.ItemID));
-        }
+        notificationManager.ShowNotification(
+            title,
+            message,
+            parentNotificationTransform,
+            notificationPrefab,
+            notificationDuration
+        );
     }
 
     private void OnViewButtonClick(int itemID)
@@ -193,32 +163,13 @@ public class PurchessManager : MonoBehaviour
         var item = FindItemByID(itemID);
         if (item == null) return;
 
-        // Set IsViewSelected to true for the selected item and false for others
         foreach (var vehicle in vehicleData)
         {
             vehicle.IsViewSelected = vehicle.ItemID == itemID;
         }
 
-        // Load the scene for viewing the selected item
         LoadViewScene();
     }
 
-    private void ShowNotification(string title, string message)
-    {
-        // Show notification using AHUI.NotificationManager
-        notificationManager.ShowNotification(
-            title,
-            message,
-            parentNotificationTransform, // Assign the parent transform for the notification
-            notificationPrefab,           // Assign the notification prefab
-            notificationDuration          // Duration for the notification
-        );
-    }
-
-    private void LoadViewScene()
-    {
-        // Load the scene using a specific name or your scene management logic
-        UnityEngine.SceneManagement.SceneManager.LoadScene("ViewScene");
-    }
+    private void LoadViewScene() => UnityEngine.SceneManagement.SceneManager.LoadScene("ViewScene");
 }
-

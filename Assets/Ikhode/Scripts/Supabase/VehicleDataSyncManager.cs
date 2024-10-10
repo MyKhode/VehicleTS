@@ -4,31 +4,39 @@ using UnityEngine;
 
 public class VehicleDataSyncManager : MonoBehaviour
 {
-    public SupabaseModelManager supabaseModelManager; // Reference to your Supabase model manager
-    private VehicleData[] vehicleData;
+    [SerializeField] private VehicleData[] vehicleData;
+    [SerializeField] private UserDisplayInfoDemo userDisplayInfoDemo;
 
     private async void Awake()
     {
-        LoadVehicleData();
-        await SyncVehicleDataWithDatabase();
+        userDisplayInfoDemo = FindObjectOfType<UserDisplayInfoDemo>();
+        if (userDisplayInfoDemo != null)
+        {
+            LoadVehicleData(); // Load vehicle data
+            try
+            {
+                await SyncVehicleDataWithDatabase(); // Sync data with the database
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error syncing vehicle data: {ex.Message}");
+            }
+        }
+        else
+        {
+            Debug.LogError("UserDisplayInfoDemo is not found in the scene.");
+        }
     }
 
     private void LoadVehicleData()
     {
-        // Load all VehicleData assets from the Resources folder
         vehicleData = Resources.LoadAll<VehicleData>("");
 
-        // Check if vehicleData is populated
         if (vehicleData.Length > 0)
-        {
             Debug.Log("VehicleData assets successfully loaded.");
-        }
         else
-        {
             Debug.LogWarning("No VehicleData assets found in Resources.");
-        }
     }
-
 
     public async Task SyncVehicleDataWithDatabase()
     {
@@ -43,14 +51,10 @@ public class VehicleDataSyncManager : MonoBehaviour
         {
             foreach (var vehicle in vehicleData)
             {
-                // Check if the vehicle is owned in the database
-                bool isOwned = await supabaseModelManager.IsVehicleOwned(oAuthUID, vehicle.ItemID);
+                bool isOwned = await userDisplayInfoDemo.IsVehicleOwned(oAuthUID, vehicle.ItemID);
+                vehicle.IsOwned = isOwned; // Sync ownership status
 
-                // Sync the IsOwned property with the database
-                vehicle.IsOwned = isOwned;
-
-                // Log the result for debugging
-                Debug.Log($"Vehicle ID: {vehicle.ItemID}, IsOwned: {vehicle.IsOwned}");
+                Debug.Log($"Vehicle ID: {vehicle.ItemID}, IsOwned: {vehicle.IsOwned}"); // Log sync result
             }
         }
         catch (System.Exception ex)

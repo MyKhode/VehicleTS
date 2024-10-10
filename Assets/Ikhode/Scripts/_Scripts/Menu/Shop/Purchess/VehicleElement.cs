@@ -53,9 +53,11 @@ public class VehicleElement : MonoBehaviour
             thumbnail.sprite = sprite;
         }
 
-        // Set vehicle GameObject color based on item state
-        vehicle.GetComponent<RawImage>().color = item.IsOwned ? ownedColor : item.IsReleased ? releasedColor : lockedColor;
-
+        if(vehicle != null)
+        {
+            // Set vehicle GameObject color based on item state
+            vehicle.GetComponent<RawImage>().color = item.IsOwned ? ownedColor : item.IsReleased ? releasedColor : lockedColor;
+        }
         // Hide the purchase and sell buttons if the vehicle ID is 1
         if (item.ItemID == 0)
         {
