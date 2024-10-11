@@ -177,8 +177,7 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
         PlayerPrefs.SetInt("SelectedRCCVehicle", selectedIndex);
 
         // Use NetcodeSceneManagerDemo to handle vehicle spawning
-        _netcodeSelect.SelectVehicle(selectedIndex);
-
+        _netcodeSelect.SelectVehicle(selectedIndex + 1);
         // Enable UI canvas if necessary (optional)
         if (RCCCanvas)
             RCCCanvas.SetActive(true);
