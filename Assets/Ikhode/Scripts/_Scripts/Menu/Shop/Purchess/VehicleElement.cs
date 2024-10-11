@@ -59,7 +59,7 @@ public class VehicleElement : MonoBehaviour
             vehicle.GetComponent<RawImage>().color = item.IsOwned ? ownedColor : item.IsReleased ? releasedColor : lockedColor;
         }
         // Hide the purchase and sell buttons if the vehicle ID is 1
-        if (item.ItemID == 0)
+        if (item.ItemID == 1)
         {
             SetButtonActive(buyButton, false);
             SetButtonActive(sellButton, false);

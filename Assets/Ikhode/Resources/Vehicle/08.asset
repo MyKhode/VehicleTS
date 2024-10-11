@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d51bef88c7d631c45811880e84b2e99b, type: 3}
-  m_Name: BMW 1
+  m_Name: 08
   m_EditorClassIdentifier: 
-  ItemID: 1
-  ItemName: fff
+  ItemID: 8
+  ItemName: dddd
   Price: 22
-  IsOwned: 0
+  IsOwned: 1
   IsReleased: 1
-  thumbnail: {fileID: 2800000, guid: 18eec9841a25aa34d811645fd35be2a3, type: 3}
+  thumbnail: {fileID: 2800000, guid: e8b46fe9d596a314b8de46c99f628f89, type: 3}
   OnIsOwnedDataChange:
     m_PersistentCalls:
       m_Calls: []

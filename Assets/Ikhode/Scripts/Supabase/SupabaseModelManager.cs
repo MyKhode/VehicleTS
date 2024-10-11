@@ -16,7 +16,7 @@ public class SupabaseModelManager : MonoBehaviour
     private Supabase.Client client;
     private User currentUser;
 
-    [SerializeField] private string vehicleID = "(0)"; // This is the ID of the vehicle being purchased
+    [SerializeField] private string vehicleID = "(1)"; // This is the ID of the vehicle being purchased
     [SerializeField] private string oAuthUID;
     [SerializeField] private string oAuthName;
 

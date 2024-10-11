@@ -29,9 +29,13 @@ public class UserDisplayInfoDemo : MonoBehaviour
     [Header("Supabase Settings")]
     public SupabaseSettings SupabaseSettings;
     private Supabase.Client client;
+    
 
     private string oAuthUID;
     private string oAuthName;
+
+    private VehicleDataSyncManager vehicleDataSyncManager;
+
     
     private const decimal InitializeCash = 25000m;
 
@@ -41,6 +45,13 @@ public class UserDisplayInfoDemo : MonoBehaviour
         LoadUserInfoFromPrefs();
         await DisplayUserInfoAsync();
         await RefreshUIAsync();
+        vehicleDataSyncManager = FindObjectOfType<VehicleDataSyncManager>();
+        if (vehicleDataSyncManager == null)
+        {
+            Debug.LogError("VehicleDataSyncManager is not found in the scene.");
+            return;
+        }
+        await Task.WhenAll(vehicleDataSyncManager.SyncVehicleDataWithDatabase());
     }
 
     private async Task InitializeSupabaseClientAsync()
@@ -170,6 +181,12 @@ public class UserDisplayInfoDemo : MonoBehaviour
         }
     }
 
+        /// <summary>
+        /// Checks if a vehicle is owned by the given player.
+        /// </summary>
+        /// <param name="playerUID">The player's OAuth UID.</param>
+        /// <param name="vehicleID">The vehicle ID to check.</param>
+        /// <returns>True if the vehicle is owned, false otherwise.</returns>
     public async Task<bool> IsVehicleOwnedAsync(string playerUID, int vehicleID)
     {
         try

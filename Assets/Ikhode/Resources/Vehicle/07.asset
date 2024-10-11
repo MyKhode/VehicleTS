@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d51bef88c7d631c45811880e84b2e99b, type: 3}
-  m_Name: BMW 2
+  m_Name: 07
   m_EditorClassIdentifier: 
-  ItemID: 2
+  ItemID: 7
   ItemName: dddd
   Price: 22
   IsOwned: 1

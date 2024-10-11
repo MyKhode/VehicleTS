@@ -73,21 +73,32 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
             // Check if the vehicle is owned
             if (vehicleData[i].IsOwned)
             {
-                // Spawning the vehicle with no controllable, no player, and engine off.
-                RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(
-                    RCC_DemoVehicles.Instance.vehicles[vehicleData[i].ItemID], // Use the vehicle ID from VehicleData
-                    spawnPosition.position,
-                    spawnPosition.rotation,
-                    false, // controllable
-                    false, // player
-                    false  // engine
-                );
+                // Adjust the vehicle ID by subtracting 1 since arrays are 0-based, but your IDs start from 1.
+                int vehicleIndex = vehicleData[i].ItemID - 1;
 
-                // Disabling spawned vehicle.
-                spawnedVehicle.gameObject.SetActive(false);
+                // Ensure that the vehicleIndex is within the bounds of the array to avoid errors
+                if (vehicleIndex >= 0 && vehicleIndex < RCC_LocalDemoVehicles.Instance.vehicles.Length)
+                {
+                    // Spawning the vehicle with no controllable, no player, and engine off.
+                    RCC_CarControllerV3 spawnedVehicle = RCC.SpawnRCC(
+                        RCC_LocalDemoVehicles.Instance.vehicles[vehicleIndex], // Use the adjusted vehicle ID
+                        spawnPosition.position,
+                        spawnPosition.rotation,
+                        false, // controllable
+                        false, // player
+                        false  // engine
+                    );
 
-                // Adding and storing it in _spawnedVehicles list.
-                _spawnedVehicles.Add(spawnedVehicle);
+                    // Disabling spawned vehicle.
+                    spawnedVehicle.gameObject.SetActive(false);
+
+                    // Adding and storing it in _spawnedVehicles list.
+                    _spawnedVehicles.Add(spawnedVehicle);
+                }
+                else
+                {
+                    Debug.LogWarning("Vehicle ID out of bounds for vehicle: " + vehicleData[i].ItemName);
+                }
             }
         }
 
@@ -101,8 +112,8 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
                 RCCCamera.GetComponent<RCC_CameraCarSelection>().enabled = true;
         }
 
-        if (RCCCanvas)
-            RCCCanvas.SetActive(false);
+        // if (RCCCanvas)
+        //     RCCCanvas.SetActive(false);
     }
 
 

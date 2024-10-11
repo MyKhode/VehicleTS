@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: RCC_NetcodeDemoVehicles
   m_EditorClassIdentifier: 
   vehicles:
-  - {fileID: 4419684911317627281, guid: 400070a56b743fe44822a53391eeb835, type: 3}
   - {fileID: 580181198717169275, guid: 3a5ce4c6edef380418e67cc673d0e2fe, type: 3}
   - {fileID: 4493774594652649358, guid: c0b3a5b1633f3a8479a7982b9d0e04fd, type: 3}
   - {fileID: 3354115180038256481, guid: 37322acf686159f42bafc5703c406d07, type: 3}
@@ -21,6 +20,4 @@ MonoBehaviour:
   - {fileID: 8604693750619759251, guid: 731054848d1924c48a4e597974a16bca, type: 3}
   - {fileID: 11495930, guid: b119b72964b6fdb479517c9823faab28, type: 3}
   - {fileID: 8573549319431884785, guid: 72ef9b4d3dea86741a5e2b2c951e19a6, type: 3}
-  - {fileID: 2533337409777661335, guid: f8237035bdfd2cf4092bc40331bbeb3e, type: 3}
-  - {fileID: 2533337409777661335, guid: f8237035bdfd2cf4092bc40331bbeb3e, type: 3}
   - {fileID: 2533337409777661335, guid: f8237035bdfd2cf4092bc40331bbeb3e, type: 3}
