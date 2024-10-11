@@ -112,8 +112,8 @@ public class RCC_NetcodeCarSelectionExample : MonoBehaviour {
                 RCCCamera.GetComponent<RCC_CameraCarSelection>().enabled = true;
         }
 
-        // if (RCCCanvas)
-        //     RCCCanvas.SetActive(false);
+        if (RCCCanvas)
+            RCCCanvas.SetActive(false);
     }
 
 
