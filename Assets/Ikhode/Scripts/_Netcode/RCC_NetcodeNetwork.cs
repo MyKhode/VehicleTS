@@ -77,6 +77,15 @@ public class RCC_NetcodeNetwork : NetworkBehaviour
         {
             correctPlayerPos.Value = transform.position;
             correctPlayerRot.Value = transform.rotation;
+
+        RCC.RegisterPlayerVehicle(carController);
+        RCC.SetControl(carController, true);
+        
+        if (RCC_SceneManager.Instance.activePlayerCamera)
+        {
+            RCC_SceneManager.Instance.activePlayerCamera.SetTarget(carController);
+        }
+          
         }
 
         // Create nickname text

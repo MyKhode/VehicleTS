@@ -53,6 +53,8 @@ public class NetcodeSceneManagerDemo : NetworkBehaviour
     {
         if (!IsServer) return;
 
+
+
         // Instantiate the selected vehicle for the client
         var selectedVehicle = RCC_NetcodeDemoVehicles.Instance.vehicles[selectedVehicleIndex];
         if (selectedVehicle == null)
@@ -62,9 +64,8 @@ public class NetcodeSceneManagerDemo : NetworkBehaviour
         }
 
         var newVehicle = Instantiate(selectedVehicle, SpawnPoint.position, SpawnPoint.rotation);
-        RCC.RegisterPlayerVehicle(newVehicle);
-        RCC.SetControl(newVehicle, true);
 
+    
         var networkObject = newVehicle.GetComponent<NetworkObject>();
         if (networkObject == null)
         {
@@ -73,34 +74,12 @@ public class NetcodeSceneManagerDemo : NetworkBehaviour
             return;
         }
 
-        // Spawn the vehicle as the player object
+        // Spawn the vehicle as the player object for the correct client
         networkObject.SpawnAsPlayerObject(clientId, true);
 
-        // Notify the client to set their camera to the new vehicle
-        UpdateClientCameraClientRpc(clientId, networkObject.NetworkObjectId);
     }
 
-    /// <summary>
-    /// ClientRpc to update the camera on the client side to follow the newly spawned vehicle.
-    /// </summary>
-    [ClientRpc]
-    private void UpdateClientCameraClientRpc(ulong clientId, ulong vehicleNetworkObjectId)
-    {
-        if (IsOwner && NetworkManager.Singleton.LocalClientId == clientId)
-        {
-            // Retrieve the vehicle game object
-            var vehicle = NetworkManager.SpawnManager.SpawnedObjects[vehicleNetworkObjectId].gameObject;
 
-            // Get the RCC_CarControllerV3 component from the vehicle
-            var carController = vehicle.GetComponent<RCC_CarControllerV3>();
-
-            if (RCC_SceneManager.Instance.activePlayerCamera != null && carController != null)
-            {
-                // Set the target to the car controller, not the game object
-                RCC_SceneManager.Instance.activePlayerCamera.SetTarget(carController);
-            }
-        }
-    }
 
     public void SelectVehicle(int vehicleIndex)
     {
