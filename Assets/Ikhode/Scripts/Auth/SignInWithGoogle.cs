@@ -45,6 +45,14 @@ public class SignInWithGoogle : MonoBehaviour
     {
         _doSignOut = true;
     }
+    // void Awake()
+    // {
+    //     string PlayerAuth = PlayerPrefs.GetString("OAuth_Name", null);
+    //     if (PlayerAuth != null)
+    //     {
+    //         SceneManager.LoadScene(homeSceneName);
+    //     }
+    // }
 
     private async void Update()
     {

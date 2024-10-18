@@ -23,8 +23,7 @@ MonoBehaviour:
       m_Calls: []
   Decal_Top_URL: 
   Decal_Side_URL: 
-  VehicleGamePlayPrefab: {fileID: 5287327670923739592, guid: f592cb04f9951ca4490c2cbc8edf51d2,
-    type: 3}
+  VehicleGamePlayPrefab: {fileID: 5287327670923739592, guid: f592cb04f9951ca4490c2cbc8edf51d2, type: 3}
   VehicleScore: 0
   Manufacturer: 
   ModelName: 
